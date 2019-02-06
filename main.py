@@ -3,7 +3,7 @@ from simple_logistic_regression import LogisticRegressionModel
 import data_manipulator as dm
 
 def main():
-    dm  
+    pass
 
 if __name__ == '__main__':
     main()
