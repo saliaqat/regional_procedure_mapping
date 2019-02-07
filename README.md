@@ -17,10 +17,12 @@ Using Python 3.6
 **Models/simple_logistic_regression.py** is trivial example of a model wrapper, made to work well with our data.
 
 ## Development
-To create a new model, create a new subclass of Model in Models. Implement the abstract methods of Models and add any additional needed methods.
+To get started, download the .csv files from the Google Drive and paste them into input_data. From there, you can do the following:
 
-To modify how data is read, add a method to the DataReader class inside data_reader.py
+..To create a new model, create a new subclass of Model in Models. Implement the abstract methods of Models and add any additional needed methods.
 
-To transform the data, implement a method inside data_manipulator.py
+..To modify how data is read, add a method to the DataReader class inside data_reader.py
+
+..To transform the data, implement a method inside data_manipulator.py
 
 
