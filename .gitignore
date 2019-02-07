@@ -1,4 +1,4 @@
-input_data/
+input_data/*
 .venv/
 .idea/
 __pycache__/
