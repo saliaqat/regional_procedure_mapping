@@ -25,6 +25,9 @@ class Model:
         else:
             plt.savefig(output_dir+self.name+'_ROC')
 
+    def get_name(self):
+        return self.name
+
     @abc.abstractmethod
     def train(self, x, y):
         raise NotImplementedError
