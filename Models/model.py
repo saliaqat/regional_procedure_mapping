@@ -6,7 +6,7 @@ class Model:
     def __init__(self):
         pass
 
-    def plot_ROC(self, x, y, pos_labels, output_dir='output/'):
+    def plot_ROC(self, x, y, pos_labels=None, output_dir='output/'):
         pred = self.predict(x)
         fpr, tpr, thresholds = metrics.roc_curve(y, pred, pos_labels)
         auc = metrics.auc(fpr, tpr)

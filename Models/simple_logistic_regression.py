@@ -1,7 +1,6 @@
 from sklearn.linear_model import LogisticRegression
 from Models.model import Model
 from sklearn import metrics
-from matplotlib import pyplot as plt
 
 class LogisticRegressionModel(Model):
 

@@ -5,7 +5,7 @@ from data_reader import DataReader
 def main():
     lg = LogisticRegressionModel()
     lg.train([[1], [2], [3], [4], [5]], [1, 0, 1, 0, 1])
-    evaluate_model(lg, [[3], [5], [6], [1], [2]], [1, 1, 0, 1, 0])
+    evaluate_model(lg, [[3], [5], [6], [1], [2]], [1, 1, 0, 1, 0], plot_roc=True)
     pass
 
 def evaluate_model(model, test_x, test_y, plot_roc=False):
