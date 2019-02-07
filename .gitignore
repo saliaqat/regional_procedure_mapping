@@ -3,3 +3,5 @@ input_data/*
 .idea/
 __pycache__/
 output/*
+*.pyc
+Models/*.pyc
