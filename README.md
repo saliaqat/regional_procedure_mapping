@@ -19,10 +19,10 @@ Using Python 3.6
 ## Development
 To get started, download the .csv files from the Google Drive and paste them into input_data. From there, you can do the following:
 
-..To create a new model, create a new subclass of Model in Models. Implement the abstract methods of Models and add any additional needed methods.
+  To create a new model, create a new subclass of Model in Models. Implement the abstract methods of Models and add any additional needed methods.
 
-..To modify how data is read, add a method to the DataReader class inside data_reader.py
+  To modify how data is read, add a method to the DataReader class inside data_reader.py
 
-..To transform the data, implement a method inside data_manipulator.py
+  To transform the data, implement a method inside data_manipulator.py
 
 
