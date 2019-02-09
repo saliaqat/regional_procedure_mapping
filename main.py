@@ -5,22 +5,20 @@ from data_manipulator import *
 
 def main():
     # Sample code to read and split data
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x, train_y, test_x, test_y = get_train_test_split(df)
 
-    # data_reader = DataReader()
-    # df = data_reader.get_all_data()
-    # train_x, train_y, test_x, test_y = get_train_test_split(df)
-
+    # Tokenize train_x into a list of tokens for each row
+    tokens, _ = tokenize(train_x, train_y, save_missing_feature_as_string=True)
 
     # Sample code to train logistic regression model
-
     # lg = LogisticRegressionModel()
-    #
     # train_x, train_y, test_x, test_y = get_sample_data()
-    #
     # lg.train(train_x, train_y)
     # evaluate_model(lg,test_x ,test_y , plot_roc=True)
 
-    # Opens interactive terminal. Used to try out code.
+    # Opens interactive terminal. Used to test out code.
     from IPython import embed
     embed()
 
