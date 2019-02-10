@@ -14,7 +14,9 @@ Using Python 3.6
 
 **data_manipulator.py** is a library that has functions for manipulating data, such as splitting the dataframe into train/test
 
-**Models/simple_logistic_regression.py** is trivial example of a model wrapper, made to work well with our data.
+**Models/logistic_regression.py** is trivial example of a model wrapper, made to work well with our data.
+
+**main.py** shows sample code to demonstrate workflow
 
 ## Development
 To get started, download the .csv files from the Google Drive and paste them into input_data. From there, you can do the following:
@@ -24,5 +26,7 @@ To get started, download the .csv files from the Google Drive and paste them int
     * To modify how data is read, add a method to the DataReader class inside data_reader.py
 
     * To transform the data, implement a method inside data_manipulator.py
+    
+    * Each person should have their own .py file to work on. 
 
 
