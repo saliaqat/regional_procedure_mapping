@@ -2,8 +2,7 @@ from sklearn.linear_model import LogisticRegression
 from Models.model import Model
 from sklearn import metrics
 
-class LogisticRegressionModel(Model):
-
+class BinaryLogisticRegressionModel(Model):
     def __init__(self, penalty='l2'):
         self.model = LogisticRegression(penalty=penalty)
         self.name = 'binaryLogisticRegressionModel'
@@ -27,3 +26,27 @@ class LogisticRegressionModel(Model):
         pred = self.predict(x)
         return metrics.f1_score(y, pred, average='macro')
         pass
+
+
+
+class MultiClassLogisticRegression(Model):
+    def __init__(self, penalty='l2'):
+        self.model = LogisticRegression(penalty=penalty, solver='newton-cg')
+        self.name = 'binaryLogisticRegressionModel'
+
+    def train(self, x, y):
+        self.model.fit(x, y, )
+
+    def predict(self, x):
+        return self.model.predict(x)
+
+    def score(self, x, y):
+        return self.model.score(x, y)
+
+    def AUC(self, x, y, pos_labels=None):
+        raise NotImplementedError
+
+
+    def F1(self, x, y):
+        raise NotImplementedError
+

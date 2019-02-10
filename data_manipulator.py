@@ -1,4 +1,6 @@
 from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.tokenize import word_tokenize
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
@@ -54,15 +56,12 @@ def get_train_validate_test_split(input_df, random_state=1337, label=label_colum
 
     return train_x, train_y, validation_x, validation_y, test_x, test_y
 
-def remove_stop_words(tokens):
-    stopset = set(stopwords.words('english'))
-    return [w for w in tokens if (not w in stopset or w != 'nan')]
-
 # Takes as input features as x, and labels as y.
 # Returns a pandas series containing the all features tokenized in a list for each row
 # Tokenizer considers alphanumeric characters only (can specify using parameters)
+# Tokenizer only lower cases the strings. Does no other processing.
 # Optional parameter save_missing_as_feature sets all missing columns to a unique
-# code to save that that column was missing. Default setting does not do that.
+# code to save that that column was missing. Default setting removes nans from tokens.
 def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+'):
     x = x[text_columns]
     x[text_columns] = x[text_columns].astype(str)
@@ -77,7 +76,18 @@ def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0
             x[col[0]] = x[col[0]].apply(lambda x: x if x != 'nan' else "")
 
     for col in text_columns:
-        tokens = x[col].apply(lambda x: (remove_stop_words(tokenizer.tokenize(x.lower()))))
+        tokens = x[col].apply(lambda x: ((tokenizer.tokenize(x.lower()))))
         x['tokens'] = x['tokens'] + tokens
 
     return x['tokens'], y
+
+# Takes as input tokens, labels and a vectorizer and returns the vectorized tokens, labels and feature_names
+# Vectorizer is defaulted to count vectorizer, but can be TfidfVectorizer or any other vectorizer
+def tokens_to_features(x, y, vectorizer_class=CountVectorizer, feature_names=None):
+    if feature_names:
+        vectorizer = vectorizer_class(tokenizer=lambda x: x, lowercase=False, strip_accents=False, vocabulary=feature_names)
+    else:
+        vectorizer = vectorizer_class(tokenizer= lambda x: x, lowercase=False, strip_accents=False)
+    weights = vectorizer.fit_transform(x)
+    feature_names = vectorizer.get_feature_names()
+    return weights, y, feature_names
