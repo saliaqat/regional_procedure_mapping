@@ -41,10 +41,10 @@ class Model:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def AUC(self):
+    def AUC(self, x, y, pos_labels=None):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def F1(self):
+    def F1(self, x, y):
         raise NotImplementedError
 

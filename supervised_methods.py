@@ -1,4 +1,6 @@
+import numpy as np
 from Models.logistic_regression import BinaryLogisticRegressionModel, MultiClassLogisticRegression
+from Models.neural_net import MultiClassSimpleCNN
 from Models.model import Model
 from data_reader import DataReader
 from data_manipulator import *
@@ -25,12 +27,17 @@ def multiclass_logistic_regression():
     tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=True)
     train_x, train_y, feature_names = tokens_to_features(tokens, train_y_raw)
 
-    lg = _get_multiclass_logistic_regression_model(train_x, train_y)
+    # model = _get_multiclass_logistic_regression_model(train_x, train_y)
+
+    # from IPython import embed
+    # embed()
+
+    model = _get_multiclass_simple_cnn_model(train_x, train_y, data_reader.get_region_labels()['Code'])
 
     tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
     test_x, test_y, _ = tokens_to_features(tokens, test_y_raw, feature_names=feature_names)
 
-    evaluate_model(lg, test_x, test_y, plot_roc=False)
+    evaluate_model(model, test_x, test_y, plot_roc=False)
 
 # Cacheable saves the model, so we don't have to train it again. (training takes around 15 minutes)
 @Cachable("multiclass_logistic_regression_model.pkl", version=1)
@@ -39,11 +46,20 @@ def _get_multiclass_logistic_regression_model(train_x, train_y):
     lg.train(train_x, train_y)
     return lg
 
+# @Cachable("multiclass_simple_cnn_model.pkl", version=2)
+def _get_multiclass_simple_cnn_model(train_x, train_y, labels):
+    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
+    model.set_train_data(train_x, train_y)
+    model.train()
+    return model
+
+
 def evaluate_model(model, test_x, test_y, plot_roc=False):
-    predictions = model.predict(test_x)
-    score = model.score(test_x, test_y)
+    model.set_test_data(test_x, test_y)
+    predictions = model.predict()
+    score = model.score()
 #    AUC = model.AUC(test_x, test_y)
-    F1 = model.F1(test_x, test_y)
+#     F1 = model.F1()
 
     # if plot_roc:
     #     model.plot_ROC(test_x, test_y)
@@ -52,7 +68,7 @@ def evaluate_model(model, test_x, test_y, plot_roc=False):
     print("predictions: ", predictions)
     print("score: ", score)
     # print("auc: ", AUC)
-    print("f1: ", F1)
+    # print("f1: ", F1)
 
 if __name__ == '__main__':
     main()

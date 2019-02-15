@@ -8,6 +8,7 @@ class DataReader:
         self.data_path = data_path
         self._read_data_directory()
 
+
     def _read_data_directory(self):
         self.files = [(self.data_path + f) for f in os.listdir(self.data_path) if os.path.isfile(self.data_path + f) and
                       (self.data_path + f).endswith('.csv')]
@@ -21,6 +22,9 @@ class DataReader:
             self.df_list[1].append(file)
 
         self.df = pd.concat(self.df_list[0], axis=0, ignore_index=True)
+
+        df = pd.read_csv('input_data/region_labels/regional_labels.csv', index_col=None, header=0, sep=',')
+        self.regional_df = df
 
 
     # PUBLIC INTERFACE BELOW #
@@ -40,3 +44,6 @@ class DataReader:
                 return self.df_list[0][i]
 
         raise FileNotFoundError
+
+    def get_region_labels(self):
+        return self.regional_df
