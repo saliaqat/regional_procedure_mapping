@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import roc_curve, auc, f1_score
+from sklearn.metrics import roc_curve, auc, f1_score, accuracy_score
 import matplotlib.pyplot as plt
 from Models.model import Model
 from keras.layers import Conv1D, Flatten, Dropout, MaxPooling1D, GRU, RNN
@@ -46,9 +46,14 @@ class NeuralNet(Model):
         self.predict_y = self.model.predict(self.test_x)
         return self.predict_y
 
+    # def predict(self, x):
+    #     y = self.model.predict(x)
+    #     return y
+
     def score(self):
-        self.score = self.model.evaluate(self.test_x, self.test_y)
-        return self.score
+        self.the_score = accuracy_score(np.argmax(self.test_y, axis=1), np.argmax(self.predict_y, axis=1))
+        # self.score = self.model.evaluate(self.test_x, self.test_y)
+        return self.the_score
 
 class MultiClassSimpleCNN(NeuralNet):
     def __init__(self, in_shape, regional_labels, batch_size=64, epochs=1):

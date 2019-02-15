@@ -91,3 +91,30 @@ def tokens_to_features(x, y, vectorizer_class=CountVectorizer, feature_names=Non
     weights = vectorizer.fit_transform(x)
     feature_names = vectorizer.get_feature_names()
     return weights, y, feature_names
+
+# Only tokenize subset of data
+def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+'):
+    columns = ['RIS PROCEDURE DESCRIPTION', 'PACS PROCEDURE DESCRIPTION', 'PACS STUDY DESCRIPTION', 'PACS BODY PART',
+     'PACS MODALITY']
+    columns_with_desc = [('RIS PROCEDURE DESCRIPTION', "risprocdesc"),
+                              ('PACS PROCEDURE DESCRIPTION', "pacsprocdesc"),
+                              ('PACS STUDY DESCRIPTION', "pacsstudydesc"),
+                              ('PACS BODY PART', "pacsbodypart"),
+                              ('PACS MODALITY', "pacsmodality")]
+    x = x[columns]
+    x[columns] = x[columns].astype(str)
+    tokenizer = RegexpTokenizer(regex_string)
+    x['tokens'] =  [[]] * len(x)
+
+    if save_missing_feature_as_string:
+        for col in columns_with_desc:
+            x[col[0]] = x[col[0]].apply(lambda x: x if x != 'nan' else ("missing" + col[1]))
+    else:
+        for col in columns_with_desc:
+            x[col[0]] = x[col[0]].apply(lambda x: x if x != 'nan' else "")
+
+    for col in columns:
+        tokens = x[col].apply(lambda x: ((tokenizer.tokenize(x.lower()))))
+        x['tokens'] = x['tokens'] + tokens
+
+    return x['tokens'], y
