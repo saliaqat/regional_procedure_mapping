@@ -3,6 +3,7 @@ import pandas as pd
 from Models.logistic_regression import BinaryLogisticRegressionModel, MultiClassLogisticRegression
 from Models.random_forest import RandomForest
 from Models.neural_net import MultiClassSimpleCNN
+from Models.neural_net import MultiClassSimpleNN
 from Models.model import Model
 from data_reader import DataReader
 from data_manipulator import *
@@ -18,9 +19,10 @@ def main():
     supervised_scratch()
 
 def supervised_scratch():
-    multiclass_logistic_regression()
-    random_forest()
-    convolutional_neural_network()
+    # multiclass_logistic_regression()
+    # random_forest()
+    # convolutional_neural_network()
+    neural_network()
     pass
 
 # Baseline
@@ -74,6 +76,85 @@ def convolutional_neural_network():
     test_x, test_y, _ = tokens_to_features(tokens, test_y_raw, feature_names=feature_names)
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
+
+# NN
+def neural_network():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
+    train_x, train_y, feature_names = tokens_to_features(tokens, train_y_raw)
+
+    model = _get_multiclass_simple_nn_model(train_x, train_y, data_reader.get_region_labels()['Code'])
+
+    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
+    test_x, test_y, _ = tokens_to_features(tokens, test_y_raw, feature_names=feature_names)
+
+    evaluate_model_nn(model, test_x, test_y, plot_roc=False)
+
+
+
+# Cacheable saves the model, so we don't have to train it again. (training takes around 15 minutes)
+# version 1 uses the default regex tokenizer and follows the most basic formulation
+# version 2 uses the default r'[\S]+' tokenizer and follows the most basic formulation
+@Cachable("multiclass_logistic_regression_model.pkl", version=1)
+def _get_multiclass_logistic_regression_model(train_x, train_y):
+    lg = MultiClassLogisticRegression()
+    lg.train(train_x, train_y)
+    return lg
+
+
+def _get_multiclass_random_forest_model(train_x, train_y):
+    lg = RandomForest()
+    lg.train(train_x, train_y)
+    return lg
+
+
+# @Cachable("multiclass_simple_cnn_model.pa", version=2)
+def _get_multiclass_simple_cnn_model(train_x, train_y, labels):
+    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
+    model.set_train_data(train_x, train_y)
+    model.train()
+    return model
+
+def _get_multiclass_simple_nn_model(train_x, train_y, labels):
+    model = MultiClassSimpleNN(train_x.shape, np.array(labels))
+    model.set_train_data(train_x, train_y)
+    model.train()
+    return model
+
+
+def evaluate_model(model, test_x, test_y, plot_roc=False):
+    predictions = model.predict(test_x)
+    score = model.score(test_x, test_y)
+#    AUC = model.AUC(test_x, test_y)
+#     F1 = model.F1()
+
+    # if plot_roc:
+    #     model.plot_ROC(test_x, test_y)
+
+    print(model.get_name() + ' Evaluation')
+    print("predictions: ", predictions)
+    print("score: ", score)
+    # print("auc: ", AUC)
+    # print("f1: ", F1)
+
+def evaluate_model_nn(model, test_x, test_y, plot_roc=False):
+    model.set_test_data(test_x, test_y)
+    predictions = model.predict()
+    score = model.score()
+#    AUC = model.AUC(test_x, test_y)
+#     F1 = model.F1()
+
+    # if plot_roc:
+    #     model.plot_ROC(test_x, test_y)
+
+    print(model.get_name() + ' Evaluation')
+    print("predictions: ", predictions)
+    print("score: ", score)
+    # print("auc: ", AUC)
+    # print("f1: ", F1)
 
 
 def manual_testing(model, feature_names, data_reader):
@@ -154,58 +235,6 @@ def manual_testing_nn(model, feature_names, data_reader):
         print(answer)
         print(df)
 
-# Cacheable saves the model, so we don't have to train it again. (training takes around 15 minutes)
-@Cachable("multiclass_logistic_regression_model.pkl", version=1)
-def _get_multiclass_logistic_regression_model(train_x, train_y):
-    lg = MultiClassLogisticRegression()
-    lg.train(train_x, train_y)
-    return lg
-
-
-def _get_multiclass_random_forest_model(train_x, train_y):
-    lg = RandomForest()
-    lg.train(train_x, train_y)
-    return lg
-
-
-# @Cachable("multiclass_simple_cnn_model.pa", version=2)
-def _get_multiclass_simple_cnn_model(train_x, train_y, labels):
-    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
-    model.set_train_data(train_x, train_y)
-    model.train()
-    return model
-
-
-def evaluate_model(model, test_x, test_y, plot_roc=False):
-    predictions = model.predict(test_x)
-    score = model.score(test_x, test_y)
-#    AUC = model.AUC(test_x, test_y)
-#     F1 = model.F1()
-
-    # if plot_roc:
-    #     model.plot_ROC(test_x, test_y)
-
-    print(model.get_name() + ' Evaluation')
-    print("predictions: ", predictions)
-    print("score: ", score)
-    # print("auc: ", AUC)
-    # print("f1: ", F1)
-
-def evaluate_model_nn(model, test_x, test_y, plot_roc=False):
-    model.set_test_data(test_x, test_y)
-    predictions = model.predict()
-    score = model.score()
-#    AUC = model.AUC(test_x, test_y)
-#     F1 = model.F1()
-
-    # if plot_roc:
-    #     model.plot_ROC(test_x, test_y)
-
-    print(model.get_name() + ' Evaluation')
-    print("predictions: ", predictions)
-    print("score: ", score)
-    # print("auc: ", AUC)
-    # print("f1: ", F1)
 
 if __name__ == '__main__':
     main()
