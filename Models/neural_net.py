@@ -88,19 +88,19 @@ class MultiClassSimpleCNN(NeuralNet):
         self.name = 'multiclassSimpleCNN'
 
 class MultiClassSimpleNN(NeuralNet):
-    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=1):
+    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=5):
         NeuralNet.__init__(self, in_shape, regional_labels)
 
         features = in_shape[1]
 
         inputs = Input(shape=(1, features), name="input")
 
-        x = Dense(1024, activation="relu", name="dense1")(inputs)
-        x = Dense(512, activation="relu", name="dense2")(x)
+        x = Dense(2048, activation="relu", name="dense1")(inputs)
+        x = Dense(3072, activation="relu", name="dense2")(x)
+        x = Dense(4096, activation="relu", name="dense3")(x)
         x = Flatten()(x)
-        x = Dense(256, activation="relu", name="dense3")(x)
-        x = Dense(128, activation="relu", name="dense4")(x)
-        x = Dense(64, activation="relu", name="dense5")(x)
+        x = Dense(3072, activation="relu", name="dense4")(x)
+        x = Dense(2048, activation="relu", name="dense5")(x)
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)

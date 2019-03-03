@@ -4,6 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.tokenize import word_tokenize
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
+from gensim.models import Word2Vec
 
 all_columns = ['RIS PROCEDURE CODE', 'RIS PROCEDURE DESCRIPTION',
        'PACS SITE PROCEDURE CODE', 'PACS PROCEDURE DESCRIPTION',
@@ -81,9 +82,21 @@ def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0
 
     return x['tokens'], y
 
+def tokens_to_word2vec(x, y):
+    model = Word2Vec(min_count=1)  # or w.e ur settings are
+    model.build_vocab(x)
+    model.train(x, total_examples=len(x), epochs=10)
+    # print(model.wv['first'])
+    from IPython import embed
+    embed()
+
+    # model = Word2Vec(x)
+    # model.train(x, total_examples=len(x), epochs = 10)
+
+
 # Takes as input tokens, labels and a vectorizer and returns the vectorized tokens, labels and feature_names
 # Vectorizer is defaulted to count vectorizer, but can be TfidfVectorizer or any other vectorizer
-def tokens_to_features(x, y, vectorizer_class=CountVectorizer, feature_names=None):
+def tokens_to_bagofwords(x, y, vectorizer_class=CountVectorizer, feature_names=None):
     if feature_names:
         vectorizer = vectorizer_class(tokenizer=lambda x: x, lowercase=False, strip_accents=False, vocabulary=feature_names)
     else:
@@ -93,14 +106,15 @@ def tokens_to_features(x, y, vectorizer_class=CountVectorizer, feature_names=Non
     return weights, y, feature_names
 
 # Only tokenize subset of data
-def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+'):
+def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+', remove_repeats=False,
+                     remove_short=False):
     columns = ['RIS PROCEDURE DESCRIPTION', 'PACS PROCEDURE DESCRIPTION', 'PACS STUDY DESCRIPTION', 'PACS BODY PART',
-     'PACS MODALITY']
+               'PACS MODALITY']
     columns_with_desc = [('RIS PROCEDURE DESCRIPTION', "risprocdesc"),
-                              ('PACS PROCEDURE DESCRIPTION', "pacsprocdesc"),
-                              ('PACS STUDY DESCRIPTION', "pacsstudydesc"),
-                              ('PACS BODY PART', "pacsbodypart"),
-                              ('PACS MODALITY', "pacsmodality")]
+                         ('PACS PROCEDURE DESCRIPTION', "pacsprocdesc"),
+                         ('PACS STUDY DESCRIPTION', "pacsstudydesc"),
+                         ('PACS BODY PART', "pacsbodypart"),
+                         ('PACS MODALITY', "pacsmodality")]
     x = x[columns]
     x[columns] = x[columns].astype(str)
     tokenizer = RegexpTokenizer(regex_string)
@@ -116,5 +130,11 @@ def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'
     for col in columns:
         tokens = x[col].apply(lambda x: ((tokenizer.tokenize(x.lower()))))
         x['tokens'] = x['tokens'] + tokens
+    # from IPython import embed
+    # embed()
+    if remove_repeats:
+        x['tokens'] = x['tokens'].apply(lambda y: list(set(y)))
+    if remove_short:
+        x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if len(z) > 1])
 
     return x['tokens'], y

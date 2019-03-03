@@ -22,8 +22,19 @@ def supervised_scratch():
     # multiclass_logistic_regression()
     # random_forest()
     # convolutional_neural_network()
-    neural_network()
+    # neural_network(
+    scratch()
     pass
+
+def scratch():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, regex_string=r'[a-zA-Z0-9/]+',
+                                           save_missing_feature_as_string=False,
+                                           remove_repeats=True, remove_short=True)
+    train_x, train_y, feature_names = tokens_to_word2vec(tokens, train_y_raw)
 
 # Baseline
 # Score:    0.7962874821513565
@@ -34,12 +45,12 @@ def multiclass_logistic_regression():
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, feature_names = tokens_to_features(tokens, train_y_raw)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
 
     model = _get_multiclass_logistic_regression_model(train_x, train_y)
 
     tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y, _ = tokens_to_features(tokens, test_y_raw, feature_names=feature_names)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
 
     evaluate_model(model, test_x, test_y, plot_roc=False)
 
@@ -51,12 +62,12 @@ def random_forest():
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, feature_names = tokens_to_features(tokens, train_y_raw)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
 
     model = _get_multiclass_random_forest_model(train_x, train_y)
 
     tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y, _ = tokens_to_features(tokens, test_y_raw, feature_names=feature_names)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
 
     evaluate_model(model, test_x, test_y, plot_roc=False)
 
@@ -68,12 +79,12 @@ def convolutional_neural_network():
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, feature_names = tokens_to_features(tokens, train_y_raw)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
 
     model = _get_multiclass_simple_cnn_model(train_x, train_y, data_reader.get_region_labels()['Code'])
 
     tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y, _ = tokens_to_features(tokens, test_y_raw, feature_names=feature_names)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
@@ -84,12 +95,12 @@ def neural_network():
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, feature_names = tokens_to_features(tokens, train_y_raw)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
 
     model = _get_multiclass_simple_nn_model(train_x, train_y, data_reader.get_region_labels()['Code'])
 
     tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y, _ = tokens_to_features(tokens, test_y_raw, feature_names=feature_names)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
@@ -185,7 +196,7 @@ def manual_testing(model, feature_names, data_reader):
                             pacsmodality]],
                           columns=text_columns)
         tokens, _ = tokenize_columns(df, 1, save_missing_feature_as_string=False)
-        test_x, _, _ = tokens_to_features(tokens, 1, feature_names=feature_names)
+        test_x, _, _ = tokens_to_bagofwords(tokens, 1, feature_names=feature_names)
 
         answer = int(model.predict(test_x))
         df = data_reader.get_all_data()
@@ -222,7 +233,7 @@ def manual_testing_nn(model, feature_names, data_reader):
                             pacsmodality]],
                           columns=text_columns)
         tokens, _ = tokenize_columns(df, 1, save_missing_feature_as_string=False)
-        test_x, _, _ = tokens_to_features(tokens, 1, feature_names=feature_names)
+        test_x, _, _ = tokens_to_bagofwords(tokens, 1, feature_names=feature_names)
         test_x = test_x.A
         test_x = test_x.reshape(test_x.shape[0], 1, test_x.shape[1])
 
