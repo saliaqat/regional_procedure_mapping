@@ -96,10 +96,10 @@ def tokens_to_word2vec(x, y):
     # model = Word2Vec(x)
     # model.train(x, total_examples=len(x), epochs = 10)
 
-def tokens_to_doc2vec(x, y, model=None, vector_size=256, min_count=1, workers=28):
+def tokens_to_doc2vec(x, y, model=None, vector_size=2048, min_count=1, workers=28):
     if model is None:
         documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(x)]
-        model = Doc2Vec(documents, vector_size=vector_size, min_count=min_count, workers=workers)
+        model = Doc2Vec(documents, vector_size=vector_size, min_count=min_count, workers=workers, epochs=10)
         represented_x = []
 
         for item in x:

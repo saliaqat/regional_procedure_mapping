@@ -36,6 +36,9 @@ def scratch():
                                            remove_repeats=True, remove_short=True)
     train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw)
 
+    # from IPython import embed
+    # embed()
+
     model = _get_multiclass_logistic_regression_model_word2doc(train_x, train_y)
 
     tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
@@ -96,6 +99,23 @@ def convolutional_neural_network():
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
 # NN
+def neural_network_doc2vec():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
+    train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw)
+
+    model = _get_multiclass_simple_nn_model(train_x, train_y, data_reader.get_region_labels()['Code'])
+
+    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
+    test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
+
+    evaluate_model_nn(model, test_x, test_y, plot_roc=False)
+
+
+# NN
 def neural_network():
     data_reader = DataReader()
     df = data_reader.get_all_data()
@@ -111,7 +131,7 @@ def neural_network():
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
-@Cachable("multiclass_logistic_regression_model_word2doc.pkl", version=2)
+@Cachable("multiclass_logistic_regression_model_word2doc.pkl", version=3)
 def _get_multiclass_logistic_regression_model_word2doc(train_x, train_y):
     lg = MultiClassLogisticRegression()
     lg.train(train_x, train_y)
