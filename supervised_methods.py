@@ -34,7 +34,14 @@ def scratch():
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, regex_string=r'[a-zA-Z0-9/]+',
                                            save_missing_feature_as_string=False,
                                            remove_repeats=True, remove_short=True)
-    train_x, train_y, feature_names = tokens_to_word2vec(tokens, train_y_raw)
+    train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw)
+
+    model = _get_multiclass_logistic_regression_model_word2doc(train_x, train_y)
+
+    tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
+    test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
+
+    evaluate_model(model, test_x, test_y, plot_roc=False)
 
 # Baseline
 # Score:    0.7962874821513565
@@ -104,7 +111,11 @@ def neural_network():
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
-
+@Cachable("multiclass_logistic_regression_model_word2doc.pkl", version=2)
+def _get_multiclass_logistic_regression_model_word2doc(train_x, train_y):
+    lg = MultiClassLogisticRegression()
+    lg.train(train_x, train_y)
+    return lg
 
 # Cacheable saves the model, so we don't have to train it again. (training takes around 15 minutes)
 # version 1 uses the default regex tokenizer and follows the most basic formulation

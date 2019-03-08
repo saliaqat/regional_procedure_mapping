@@ -5,6 +5,9 @@ from nltk.tokenize import word_tokenize
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
 from gensim.models import Word2Vec
+from gensim.models.doc2vec import Doc2Vec
+from gensim.models.doc2vec import TaggedDocument
+import numpy as np
 
 all_columns = ['RIS PROCEDURE CODE', 'RIS PROCEDURE DESCRIPTION',
        'PACS SITE PROCEDURE CODE', 'PACS PROCEDURE DESCRIPTION',
@@ -92,6 +95,23 @@ def tokens_to_word2vec(x, y):
 
     # model = Word2Vec(x)
     # model.train(x, total_examples=len(x), epochs = 10)
+
+def tokens_to_doc2vec(x, y, model=None, vector_size=256, min_count=1, workers=28):
+    if model is None:
+        documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(x)]
+        model = Doc2Vec(documents, vector_size=vector_size, min_count=min_count, workers=workers)
+        represented_x = []
+
+        for item in x:
+            represented_x.append(model.infer_vector(item))
+        return np.array(represented_x), y, model
+    else:
+        represented_x = []
+
+        for item in x:
+            represented_x.append(model.infer_vector(item))
+        return np.array(represented_x), y
+
 
 
 # Takes as input tokens, labels and a vectorizer and returns the vectorized tokens, labels and feature_names
