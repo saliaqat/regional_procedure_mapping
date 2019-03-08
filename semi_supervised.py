@@ -22,7 +22,7 @@ import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.decomposition import PCA
-from sklearn.linear_model import LogisticRegression, SGDClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from data_reader import DataReader
 from data_manipulator import *
@@ -70,9 +70,9 @@ data_reader = DataReader()
 df = data_reader.get_all_data()
 train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=True)
-train_x, train_y, feature_names = tokens_to_features(tokens, train_y_raw)
+train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
 tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-test_x, test_y, _ = tokens_to_features(tokens, test_y_raw, feature_names=feature_names)
+test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
 print('Train shape: ', train_x.shape)
 print('Test shape: ', test_x.shape)
 #lg = MultiClassLogisticRegression()
@@ -87,8 +87,8 @@ test_comp_x = svd.transform(test_x)
 print('Train compressed shape: ', train_comp_x.shape)
 print('Test compressed shape: ', test_comp_x.shape)
 print('Fitting logistic regression with compressed features: {} ...'.format(5000))
-lg = SGDClassifier(loss='squared_loss', penalty='l2', max_iter=10)
-lg.fit(train_comp_x, train_y)
+lg = MultiClassLogisticRegression()
+lg.train(train_comp_x, train_y)
 print('Accuracy with compressed features of dim {}: {}'.format(5000, lg.score(test_comp_x, test_y)))
 
 
