@@ -9,6 +9,8 @@ from gensim.models.doc2vec import Doc2Vec
 from gensim.models.doc2vec import TaggedDocument
 import numpy as np
 
+from cache_em_all import Cachable
+
 all_columns = ['RIS PROCEDURE CODE', 'RIS PROCEDURE DESCRIPTION',
        'PACS SITE PROCEDURE CODE', 'PACS PROCEDURE DESCRIPTION',
        'PACS STUDY DESCRIPTION', 'PACS BODY PART', 'PACS MODALITY',
@@ -96,10 +98,10 @@ def tokens_to_word2vec(x, y):
     # model = Word2Vec(x)
     # model.train(x, total_examples=len(x), epochs = 10)
 
-def tokens_to_doc2vec(x, y, model=None, vector_size=2048, min_count=1, workers=28):
+def tokens_to_doc2vec(x, y, model=None, vector_size=16384, min_count=1, workers=1):
     if model is None:
         documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(x)]
-        model = Doc2Vec(documents, vector_size=vector_size, min_count=min_count, workers=workers, epochs=10)
+        model = get_doc2vec_model(documents, vector_size=vector_size, min_count=min_count, workers=workers, epochs=10)
         represented_x = []
 
         for item in x:
@@ -112,7 +114,10 @@ def tokens_to_doc2vec(x, y, model=None, vector_size=2048, min_count=1, workers=2
             represented_x.append(model.infer_vector(item))
         return np.array(represented_x), y
 
-
+@Cachable("doc2vec_model.pkl", version=1)
+def get_doc2vec_model(documents, vector_size, min_count, workers, epochs=10):
+    model = Doc2Vec(documents, vector_size=vector_size, min_count=min_count, workers=workers, epochs=epochs)
+    return model
 
 # Takes as input tokens, labels and a vectorizer and returns the vectorized tokens, labels and feature_names
 # Vectorizer is defaulted to count vectorizer, but can be TfidfVectorizer or any other vectorizer

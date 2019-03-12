@@ -32,7 +32,7 @@ class BinaryLogisticRegressionModel(Model):
 
 class MultiClassLogisticRegression(Model):
     def __init__(self, penalty='l2'):
-        self.model = LogisticRegression(penalty=penalty, solver='newton-cg')
+        self.model = LogisticRegression(penalty=penalty, solver='newton-cg', n_jobs=1)
         self.name = 'multiclassLogisticRegressionModel'
 
     def train(self, x, y):

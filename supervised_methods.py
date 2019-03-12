@@ -27,23 +27,31 @@ def supervised_scratch():
     pass
 
 def scratch():
+    test
+
+# accuracy: 0.04854831032841504
+def doc2vec_logistc_regression():
     data_reader = DataReader()
     df = data_reader.get_all_data()
+    print("1")
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
-
+    print("2")
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, regex_string=r'[a-zA-Z0-9/]+',
                                            save_missing_feature_as_string=False,
                                            remove_repeats=True, remove_short=True)
+    print("3")
     train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw)
-
+    print("4")
     # from IPython import embed
     # embed()
 
-    model = _get_multiclass_logistic_regression_model_word2doc(train_x, train_y)
-
+    print("5")
+    model = _get_multiclass_logistic_regression_model_word2doc_big(train_x, train_y)
+    print("6")
     tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
+    print("7")
     test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
-
+    print("8")
     evaluate_model(model, test_x, test_y, plot_roc=False)
 
 # Baseline
@@ -131,6 +139,14 @@ def neural_network():
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
+@Cachable("multiclass_logistic_regression_model_word2doc_big.pkl", version=3)
+def _get_multiclass_logistic_regression_model_word2doc_big(train_x, train_y):
+    lg = MultiClassLogisticRegression()
+    lg.train(train_x, train_y)
+    return lg
+
+
+# 2048 input size
 @Cachable("multiclass_logistic_regression_model_word2doc.pkl", version=3)
 def _get_multiclass_logistic_regression_model_word2doc(train_x, train_y):
     lg = MultiClassLogisticRegression()
