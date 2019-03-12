@@ -26,14 +26,14 @@ class NeuralNet(Model):
         self.encoder = encoder
 
     def set_train_data(self, x, y):
-        x = x.A.reshape(x.shape[0], 1, x.shape[1])
+        # x = x.A.reshape(x.shape[0], 1, x.shape[1])
         y = self.encoder.transform(y)
 
         self.train_x = x
         self.train_y = y
 
     def set_test_data(self, x, y):
-        x = x.A.reshape(x.shape[0], 1, x.shape[1])
+        # x = x.A.reshape(x.shape[0], 1, x.shape[1])
         y = self.encoder.transform(y)
 
         self.test_x = x
@@ -93,12 +93,11 @@ class MultiClassSimpleNN(NeuralNet):
 
         features = in_shape[1]
 
-        inputs = Input(shape=(1, features), name="input")
+        inputs = Input(shape=(features, ), name="input")
 
         x = Dense(2048, activation="relu", name="dense1")(inputs)
         x = Dense(3072, activation="relu", name="dense2")(x)
         x = Dense(4096, activation="relu", name="dense3")(x)
-        x = Flatten()(x)
         x = Dense(3072, activation="relu", name="dense4")(x)
         x = Dense(2048, activation="relu", name="dense5")(x)
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
