@@ -3,9 +3,9 @@ from sklearn.svm import SVC
 
 
 class SVM(Model):
-    def __init__(self, penalty='l2'):
+    def __init__(self, penalty='l2', name='SVM'):
         self.model = SVC()
-        self.name = 'SVM'
+        self.name = name
 
     def train(self, x, y):
         self.model.fit(x, y)

@@ -1,14 +1,22 @@
 import numpy as np
 import pandas as pd
-from Models.logistic_regression import BinaryLogisticRegressionModel, MultiClassLogisticRegression
-from Models.random_forest import RandomForest
-from Models.neural_net import MultiClassSimpleCNN
-from Models.neural_net import MultiClassSimpleNN
-from Models.model import Model
+
 from data_reader import DataReader
 from data_manipulator import *
+from data_manipulator_interface import *
+from cached_models import _get_multiclass_logistic_regression_model_bag_of_words_simple
+from cached_models import _get_multiclass_logistic_regression_model_doc2vec_simple
+from cached_models import _get_multiclass_logistic_regression_model_doc2vec_simple_16384
+from cached_models import _get_svm_model_bag_of_words_simple
+from cached_models import _get_svm_model_doc2vec_simple
+from cached_models import _get_svm_model_doc2vec_simple_16384
+from cached_models import _get_random_forest_model_bag_of_words_simple
+from cached_models import _get_random_forest_model_doc2vec_simple
+from cached_models import _get_random_forest_model_doc2vec_simple_16384
+from cached_models import _get_nn_model_bag_of_words_simple
+from cached_models import _get_nn_model_doc2vec_simple
+from cached_models import _get_nn_model_doc2vec_simple_16384
 
-from cache_em_all import Cachable
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -19,162 +27,166 @@ def main():
     supervised_scratch()
 
 def supervised_scratch():
-    # multiclass_logistic_regression()
-    # random_forest()
-    # convolutional_neural_network()
-    # neural_network(
-    doc2vec_logistc_regression()
-    scratch()
-    pass
+    multiclass_logistic_regression_simple_bag_of_words()
+    multiclass_logistic_regression_doc2vec()
+    multiclass_logistic_regression_doc2vec_16384()
+
+    multiclass_svm_simple_bag_of_words()
+    multiclass_svm_doc2vec()
+    multiclass_svm_doc2vec_16384()
 
 def scratch():
+
     pass
 
-# accuracy: 0.04854831032841504
-def doc2vec_logistc_regression():
-    data_reader = DataReader()
-    df = data_reader.get_all_data()
-    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
-    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, regex_string=r'[a-zA-Z0-9/]+',
-                                           save_missing_feature_as_string=False,
-                                           remove_repeats=True, remove_short=True)
-    train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw)
-
-    from IPython import embed
-    embed()
-
-    model = _get_multiclass_logistic_regression_model_word2doc_big(train_x, train_y)
-    tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
-    evaluate_model(model, test_x, test_y, plot_roc=False)
-
-# Baseline
-# Score:    0.7962874821513565
-# F1:       0.7962874821513564
-def multiclass_logistic_regression():
+####################################################
+# LOGISTIC REGRESSION
+####################################################
+# 0.7232610321615557
+def multiclass_logistic_regression_simple_bag_of_words():
     data_reader = DataReader()
     df = data_reader.get_all_data()
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+    train_x, train_y, test_x, test_y = bag_of_words_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
 
-    model = _get_multiclass_logistic_regression_model(train_x, train_y)
-
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+    model = _get_multiclass_logistic_regression_model_bag_of_words_simple(train_x, train_y)
 
     evaluate_model(model, test_x, test_y, plot_roc=False)
 
-#Random Forest
-# Score:    0.6605697966954511
-def random_forest():
+#0.09009315292037805
+def multiclass_logistic_regression_doc2vec():
     data_reader = DataReader()
     df = data_reader.get_all_data()
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+    train_x, train_y, test_x, test_y = doc2vec_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
 
-    model = _get_multiclass_random_forest_model(train_x, train_y)
-
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+    model = _get_multiclass_logistic_regression_model_doc2vec_simple(train_x, train_y)
 
     evaluate_model(model, test_x, test_y, plot_roc=False)
 
-# CNN
-# Score:    0.011287142177194533
-def convolutional_neural_network():
+def multiclass_logistic_regression_doc2vec_16384():
     data_reader = DataReader()
     df = data_reader.get_all_data()
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+    train_x, train_y, test_x, test_y = doc2vec_simple_16384(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
 
-    model = _get_multiclass_simple_cnn_model(train_x, train_y, data_reader.get_region_labels()['Code'])
+    model = _get_multiclass_logistic_regression_model_doc2vec_simple_16384(train_x, train_y)
 
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+    evaluate_model(model, test_x, test_y, plot_roc=False)
 
-    evaluate_model_nn(model, test_x, test_y, plot_roc=False)
-
-# NN
-def neural_network_doc2vec():
+####################################################
+# SVM
+####################################################
+def multiclass_svm_simple_bag_of_words():
     data_reader = DataReader()
     df = data_reader.get_all_data()
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw)
+    train_x, train_y, test_x, test_y = bag_of_words_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
 
-    model = _get_multiclass_simple_nn_model(train_x, train_y, data_reader.get_region_labels()['Code'])
+    model = _get_svm_model_bag_of_words_simple(train_x, train_y)
 
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
+    evaluate_model(model, test_x, test_y, plot_roc=False)
 
-    evaluate_model_nn(model, test_x, test_y, plot_roc=False)
-
-
-# NN
-def neural_network():
+def multiclass_svm_doc2vec():
     data_reader = DataReader()
     df = data_reader.get_all_data()
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
-    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+    train_x, train_y, test_x, test_y = doc2vec_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
 
-    model = _get_multiclass_simple_nn_model(train_x, train_y, data_reader.get_region_labels()['Code'])
+    model = _get_svm_model_doc2vec_simple(train_x, train_y)
 
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
-    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+    evaluate_model(model, test_x, test_y, plot_roc=False)
+
+def multiclass_svm_doc2vec_16384():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    train_x, train_y, test_x, test_y = doc2vec_simple_16384(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+
+    model = _get_svm_model_doc2vec_simple_16384(train_x, train_y)
+
+    evaluate_model(model, test_x, test_y, plot_roc=False)
+
+####################################################
+# Random Forest
+####################################################
+def multiclass_random_forest_simple_bag_of_words():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    train_x, train_y, test_x, test_y = bag_of_words_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+
+    model = _get_random_forest_model_bag_of_words_simple(train_x, train_y)
+
+    evaluate_model(model, test_x, test_y, plot_roc=False)
+
+def multiclass_random_forest_doc2vec():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    train_x, train_y, test_x, test_y = doc2vec_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+
+    model = _get_random_forest_model_doc2vec_simple(train_x, train_y)
+
+    evaluate_model(model, test_x, test_y, plot_roc=False)
+
+def multiclass_random_forest_doc2vec_16384():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    train_x, train_y, test_x, test_y = doc2vec_simple_16384(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+
+    model = _get_random_forest_model_doc2vec_simple_16384(train_x, train_y)
+
+    evaluate_model(model, test_x, test_y, plot_roc=False)
+
+####################################################
+# Neural Networks
+####################################################
+def multiclass_nn_simple_bag_of_words():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    train_x, train_y, test_x, test_y = bag_of_words_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+
+    model = _get_nn_model_bag_of_words_simple(train_x, train_y)
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
-@Cachable("multiclass_logistic_regression_model_word2doc_big.pkl", version=3)
-def _get_multiclass_logistic_regression_model_word2doc_big(train_x, train_y):
-    lg = MultiClassLogisticRegression()
-    lg.train(train_x, train_y)
-    return lg
+def multiclass_nn_doc2vec():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    train_x, train_y, test_x, test_y = doc2vec_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+
+    model = _get_nn_model_doc2vec_simple(train_x, train_y)
+
+    evaluate_model_nn(model, test_x, test_y, plot_roc=False)
+
+def multiclass_nn_doc2vec_16384():
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    train_x, train_y, test_x, test_y = doc2vec_simple_16384(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+
+    model = _get_nn_model_doc2vec_simple_16384(train_x, train_y)
+
+    evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
 
-# 2048 input size
-@Cachable("multiclass_logistic_regression_model_word2doc.pkl", version=3)
-def _get_multiclass_logistic_regression_model_word2doc(train_x, train_y):
-    lg = MultiClassLogisticRegression()
-    lg.train(train_x, train_y)
-    return lg
 
-# Cacheable saves the model, so we don't have to train it again. (training takes around 15 minutes)
-# version 1 uses the default regex tokenizer and follows the most basic formulation
-# version 2 uses the default r'[\S]+' tokenizer and follows the most basic formulation
-@Cachable("multiclass_logistic_regression_model.pkl", version=1)
-def _get_multiclass_logistic_regression_model(train_x, train_y):
-    lg = MultiClassLogisticRegression()
-    lg.train(train_x, train_y)
-    return lg
-
-
-def _get_multiclass_random_forest_model(train_x, train_y):
-    lg = RandomForest()
-    lg.train(train_x, train_y)
-    return lg
-
-
-# @Cachable("multiclass_simple_cnn_model.pa", version=2)
-def _get_multiclass_simple_cnn_model(train_x, train_y, labels):
-    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
-    model.set_train_data(train_x, train_y)
-    model.train()
-    return model
-
-def _get_multiclass_simple_nn_model(train_x, train_y, labels):
-    model = MultiClassSimpleNN(train_x.shape, np.array(labels))
-    model.set_train_data(train_x, train_y)
-    model.train()
-    return model
 
 
 def evaluate_model(model, test_x, test_y, plot_roc=False):

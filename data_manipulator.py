@@ -103,7 +103,7 @@ def tokens_to_doc2vec(x, y, model=None, vector_size=512, min_count=1, workers=1)
     # embed()
     if model is None:
         documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(x)]
-        model = get_doc2vec_model(documents, vector_size=vector_size, min_count=min_count, workers=workers, epochs=10)
+        model = Doc2Vec(documents, vector_size=vector_size, min_count=min_count, workers=workers, epochs=10)
         represented_x = []
 
         for item in x:
@@ -115,11 +115,6 @@ def tokens_to_doc2vec(x, y, model=None, vector_size=512, min_count=1, workers=1)
         for item in x:
             represented_x.append(model.infer_vector(item))
         return np.array(represented_x), y
-
-@Cachable("doc2vec_model.pkl", version=1)
-def get_doc2vec_model(documents, vector_size, min_count, workers, epochs=10):
-    model = Doc2Vec(documents, vector_size=vector_size, min_count=min_count, workers=workers, epochs=epochs)
-    return model
 
 # Takes as input tokens, labels and a vectorizer and returns the vectorized tokens, labels and feature_names
 # Vectorizer is defaulted to count vectorizer, but can be TfidfVectorizer or any other vectorizer
