@@ -3,9 +3,9 @@ from sklearn.metrics import roc_curve, auc, f1_score
 from Models.model import Model
 
 class RandomForest(Model):
-    def __init__(self, penalty='l2'):
+    def __init__(self, penalty='l2', name='RandomForestModel'):
         self.model = RandomForestClassifier()
-        self.name = 'RandomForestModel'
+        self.name = name
 
     def train(self, x, y):
         self.model.fit(x, y)
