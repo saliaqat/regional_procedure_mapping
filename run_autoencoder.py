@@ -64,8 +64,8 @@ def run_autoencoder(train_x, train_y, test_x, test_y, dim):
     encoded_train = encoder.predict(train_x)
     encoded_test = encoder.predict(test_x)
     
-    lg = MultiClassLogisticRegression()
-    lg.train(train_x, train_y)
+    lg = LogisticRegression(penalty='l2', solver='newton-cg', n_jobs=1)
+    lg.fit(encoded_train, train_y)
     print('Accuracy for ' + str(dim) + 'dimensions: ', lg.score(encoded_test, test_y))
 
 
