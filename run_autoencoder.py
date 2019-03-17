@@ -66,7 +66,7 @@ def run_autoencoder(train_x, train_y, test_x, test_y, dim):
     
     lg = MultiClassLogisticRegression()
     lg.train(train_x, train_y)
-    print('Accuracy for ' + str(dim) + 'dimensions: ', lg.score(test_x, test_y))
+    print('Accuracy for ' + str(dim) + 'dimensions: ', lg.score(encoded_test, test_y))
 
 
 # update: Logistic Regression after dimension reduction to 1000: 79.5%
@@ -85,7 +85,7 @@ def main():
     print(train_x.shape)
     print(test_x.shape)
     
-    dims = [500, 1000, 2500, 5000, 10000]
+    dims = [10, 500, 1000, 2500, 5000, 10000]
     for dim in dims:
         run_autoencoder(train_x, train_y, test_x, test_y, dim)
         
