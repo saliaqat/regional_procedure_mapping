@@ -68,7 +68,7 @@ def get_train_validate_test_split(input_df, random_state=1337, label=label_colum
 # Tokenizer only lower cases the strings. Does no other processing.
 # Optional parameter save_missing_as_feature sets all missing columns to a unique
 # code to save that that column was missing. Default setting removes nans from tokens.
-def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+'):
+def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+', remove_repeats=False, remove_short=False):
     x = x[text_columns]
     x[text_columns] = x[text_columns].astype(str)
     tokenizer = RegexpTokenizer(regex_string)
@@ -84,6 +84,12 @@ def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0
     for col in text_columns:
         tokens = x[col].apply(lambda x: ((tokenizer.tokenize(x.lower()))))
         x['tokens'] = x['tokens'] + tokens
+
+    if remove_repeats:
+        x['tokens'] = x['tokens'].apply(lambda y: list(set(y)))
+    if remove_short:
+        x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if len(z) > 1])
+
 
     return x['tokens'], y
 
