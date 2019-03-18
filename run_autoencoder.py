@@ -63,6 +63,9 @@ def run_autoencoder(train_x, train_y, test_x, test_y, dim):
 #    encoder = load_model('encoder.h5')
     encoded_train = encoder.predict(train_x)
     encoded_test = encoder.predict(test_x)
+
+    from IPython import embed
+    embed()
     
     lg = LogisticRegression(penalty='l2', solver='newton-cg', n_jobs=1)
     lg.fit(encoded_train, train_y)
@@ -76,18 +79,19 @@ def main():
     df = data_reader.get_all_data()
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
     
-    tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=True)
+    tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_short=True, remove_repeats=True)
     train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
     
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
+    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_short=True, remove_repeats=True)
     test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
     
     print(train_x.shape)
     print(test_x.shape)
     
-    dims = [10, 500, 1000, 2500, 5000, 10000]
+    dims = [10, 500, 1000, 2500]
     for dim in dims:
-        run_autoencoder(train_x, train_y, test_x, test_y, dim)
+        if dim > 1002:
+            run_autoencoder(train_x, train_y, test_x, test_y, dim)
         
 
     
