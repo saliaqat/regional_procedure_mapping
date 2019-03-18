@@ -21,6 +21,8 @@ from cached_models import _get_random_forest_model_doc2vec_simple_16384
 from cached_models import _get_random_forest_model_bag_of_words_full
 from cached_models import _get_random_forest_model_bag_of_words_full_save_missing
 from cached_models import _get_nn_model_bag_of_words_simple
+from cached_models import _get_nn_model_bag_of_words_simple_v2
+from cached_models import _get_nn_model_bag_of_words_simple_big
 from cached_models import _get_nn_model_doc2vec_simple
 from cached_models import _get_nn_model_doc2vec_simple_16384
 from cached_models import _get_nn_model_bag_of_words_full
@@ -45,9 +47,27 @@ def main():
     supervised_scratch()
     # load_data()
 
+# 80 percent with bag of words, full on _get_nn_model_bag_of_words_simple_v2 (single layer dense)
+# 80 percent with bag of words full on _get_nn_model_bag_of_words_simple (multi layer dense)
 def supervised_scratch():
-    multiclass_logistic_regression_full_bag_of_words_no_repeats_no_short()
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
 
+    unlabelled_df = data_reader.get_east_dir()
+    unlabelled_df = normalize_east_dir_df(unlabelled_df)
+
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+
+    train_x, train_y, test_x, test_y = bag_of_words_full(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+
+    for batch_size in [128]:
+        model  = _get_nn_model_bag_of_words_simple_v2(train_x, train_y, data_reader.get_region_labels()['Code'],
+                                                      epochs=100, batch_size=batch_size)
+
+        evaluate_model_nn(model, test_x, test_y, plot_roc=False)
+
+    from IPython import embed
+    embed()
 
 def load_data():
     data_reader = DataReader()
@@ -123,6 +143,8 @@ def run_all_models():
     # multiclass_random_forest_doc2vec_16384()
     # multiclass_nn_doc2vec_16384()
     # multiclass_svm_doc2vec_16384()
+
+    # multiclass_logistic_regression_full_bag_of_words_no_repeats_no_short()
     pass
 
 

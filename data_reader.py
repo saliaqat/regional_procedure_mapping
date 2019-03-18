@@ -26,6 +26,8 @@ class DataReader:
         df = pd.read_csv('input_data/region_labels/regional_labels.csv', index_col=None, header=0, sep=',')
         self.regional_df = df
 
+        self.east_dir = pd.read_csv('input_data/east_dir/DICS Maps_GTAW_HDIRS_20190306.csv', sep=',', header=0)
+
 
     # PUBLIC INTERFACE BELOW #
 
@@ -47,3 +49,6 @@ class DataReader:
 
     def get_region_labels(self):
         return self.regional_df
+
+    def get_east_dir(self):
+        return self.east_dir

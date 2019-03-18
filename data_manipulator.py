@@ -166,3 +166,13 @@ def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'
         x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if len(z) > 1])
 
     return x['tokens'], y
+
+def normalize_east_dir_df(df):
+    columns = ['ris_procedure_code', 'ris_procedure_description',
+       'pacs_procedure_code', 'pacs_study_description',
+       'pacs_procedure_description', 'pacs_body_part', 'pacs_modality']
+    new_names =  ['RIS PROCEDURE CODE', 'RIS PROCEDURE DESCRIPTION', 'PACS SITE PROCEDURE CODE', 'PACS PROCEDURE '
+                  'DESCRIPTION', 'PACS STUDY DESCRIPTION', 'PACS BODY PART', 'PACS MODALITY']
+    df =  df[columns]
+    df.columns = new_names
+    return df

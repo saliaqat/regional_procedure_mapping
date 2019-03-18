@@ -3,12 +3,12 @@ import numpy as np
 from Models.logistic_regression import BinaryLogisticRegressionModel, MultiClassLogisticRegression
 from Models.random_forest import RandomForest
 from Models.neural_net import MultiClassSimpleCNN
-from Models.neural_net import MultiClassSimpleNN
+from Models.neural_net import MultiClassSimpleNN, MultiClassNN
 from Models.naive_bayes import NaiveBayes, MultinomialNaiveBayes
 from Models.model import Model
 from Models.svm import SVM
 
-# 0.7189093628884204
+# 0.7232610321615557
 @Cachable("get_multiclass_logistic_regression_model_bag_of_words_simple.pkl", version=1)
 def _get_multiclass_logistic_regression_model_bag_of_words_simple(train_x, train_y):
     lg = MultiClassLogisticRegression(name='multiclass_logistic_regression_bag_of_words_simple')
@@ -16,6 +16,7 @@ def _get_multiclass_logistic_regression_model_bag_of_words_simple(train_x, train
 
     return lg
 
+# 0.7189093628884204
 @Cachable("get_multiclass_logistic_regression_model_bag_of_words_full_no_repeat_no_short.pkl", version=1)
 def _get_multiclass_logistic_regression_model_bag_of_words_full_no_repeat_no_short(train_x, train_y):
     lg = MultiClassLogisticRegression(name='multiclass_logistic_regression_bag_of_words_full_no_repeat_no_short')
@@ -38,6 +39,7 @@ def _get_multiclass_logistic_regression_model_doc2vec_simple_16384(train_x, trai
     lg.train(train_x, train_y)
 
     return lg
+
 #0.797715373631604
 @Cachable("get_multiclass_logistic_regression_model_bag_of_words_full.pkl", version=1)
 def _get_multiclass_logistic_regression_model_bag_of_words_full(train_x, train_y):
@@ -131,42 +133,56 @@ def _get_random_forest_model_bag_of_words_full_save_missing(train_x, train_y):
 
     return random_forest
 
-#0.013394981981369417
+#0.28095464744679405
 # @Cachable("get_nn_model_bag_of_words_simple.pkl", version=1)
-def _get_nn_model_bag_of_words_simple(train_x, train_y, labels):
-    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
+def _get_nn_model_bag_of_words_simple(train_x, train_y, labels, epochs=50):
+    model = MultiClassSimpleNN(train_x.shape, np.array(labels), epochs=epochs)
     model.set_train_data(train_x, train_y)
     model.train()
     return model
 
-# 0.009655266199768817
+# @Cachable("get_nn_model_bag_of_words_simple_v2.pkl", version=1)
+def _get_nn_model_bag_of_words_simple_v2(train_x, train_y, labels, epochs=50, batch_size=64):
+    model = MultiClassNN(train_x.shape, np.array(labels), epochs=epochs, batch_size=batch_size)
+    model.set_train_data(train_x, train_y)
+    model.train()
+    return model
+
+# @Cachable("get_nn_model_bag_of_words_simple_v2.pkl", version=1)
+def _get_nn_model_bag_of_words_simple_big(train_x, train_y, labels, epochs=50):
+    model = MultiClassNN(train_x.shape, np.array(labels), epochs=epochs)
+    model.set_train_data(train_x, train_y)
+    model.train()
+    return model
+
+# 0.0114911265674372748
 # @Cachable("get_nn_model_doc2vec_simple.pkl", version=1)
 def _get_nn_model_doc2vec_simple(train_x, train_y, labels):
-    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
+    model = MultiClassSimpleNN(train_x.shape, np.array(labels))
     model.set_train_data_np(train_x, train_y)
     model.train()
     return model
 
-# 0.009451281702590603
+# 0.012171074998300129
 # @Cachable("get_nn_model_doc2vec_simple_16384.pkl", version=1)
 def _get_nn_model_doc2vec_simple_16384(train_x, train_y, labels):
-    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
+    model = MultiClassSimpleNN(train_x.shape, np.array(labels))
     model.set_train_data_np(train_x, train_y)
     model.train()
     return model
 
-# 0.009995240361732508
+# 0.24797715373631604
 # @Cachable("get_nn_model_bag_of_words_full.pkl", version=1)
 def _get_nn_model_bag_of_words_full(train_x, train_y, labels):
-    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
+    model = MultiClassSimpleNN(train_x.shape, np.array(labels))
     model.set_train_data(train_x, train_y)
     model.train()
     return model
 
-# 0.009995240361732508
+# 0.22880261100156388
 # @Cachable("get_nn_model_bag_of_words_full_save_missing.pkl", version=1)
 def _get_nn_model_bag_of_words_full_save_missing(train_x, train_y, labels):
-    model = MultiClassSimpleCNN(train_x.shape, np.array(labels))
+    model = MultiClassSimpleNN(train_x.shape, np.array(labels))
     model.set_train_data(train_x, train_y)
     model.train()
     return model
