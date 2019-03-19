@@ -58,22 +58,22 @@ def supervised_scratch():
 
     train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-    train_x, train_y, test_x, test_y = bag_of_words_full(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
+    train_x, train_y, test_x, test_y = bag_of_words_full_no_empty(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
 
     model  = _get_nn_model_bag_of_words_simple_v2(train_x, train_y, data_reader.get_region_labels()['Code'],
-                                                      epochs=60, batch_size=128)
+                                                      epochs=50, batch_size=64)
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 
-    print('######################################')
-    # from IPython import embed
-    # embed()
-    tokens_train, _ = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
+    tokens_train, _ = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True)
     _, _, feature_names = tokens_to_bagofwords(tokens_train, _)
 
-    tokens, _ = tokenize(unlabelled_df, _, save_missing_feature_as_string=False)
+    tokens, _ = tokenize(unlabelled_df, _, save_missing_feature_as_string=False, remove_empty=True)
     semi_x_base, _, _ = tokens_to_bagofwords(tokens, _, feature_names=feature_names)
     train_threshold = 0.9
+
+    from IPython import embed
+    embed()
 
     for i in range(30):
         m = model.model
@@ -83,8 +83,8 @@ def supervised_scratch():
         semi_y = semi_y[pred.max(axis=1) > train_threshold]
         semi_x = semi_x_base[pred.max(axis=1) > train_threshold]
 
-        m.fit(semi_x, semi_y, batch_size=128, epochs=100)
-        m.fit(train_x, train_y, batch_size=128, epochs=30)
+        m.fit(semi_x, semi_y, batch_size=64, epochs=100)
+        m.fit(train_x, model.encoder.transform(train_y), batch_size=32, epochs=10)
 
         evaluate_model_nn(model, test_x, test_y, plot_roc=False)
         semi_x_base = semi_x_base[~(pred.max(axis=1) > train_threshold)]
