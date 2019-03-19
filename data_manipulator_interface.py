@@ -11,7 +11,57 @@ def bag_of_words_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
     train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
 
+    tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+
+    return train_x, train_y, test_x, test_y
+
+@Cachable("full_bag_of_words.pkl", version=1)
+def bag_of_words_full(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
+    tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+
     tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+
+    return train_x, train_y, test_x, test_y
+
+@Cachable("full_bag_of_words_no_empty.pkl", version=1)
+def bag_of_words_full_no_empty(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
+    tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+
+    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_empty=True)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+
+    return train_x, train_y, test_x, test_y
+
+@Cachable("full_bag_of_words_no_empty_no_numerical.pkl", version=1)
+def bag_of_words_full_no_empty_no_numerical(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
+    tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True, regex_string=r'[a-zA-Z/]+')
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+
+    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_empty=True, regex_string=r'[a-zA-Z/]+')
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+
+    return train_x, train_y, test_x, test_y
+
+@Cachable("full_bag_of_words_no_repeats_no_short.pkl", version=1)
+def bag_of_words_full_no_repeats_no_short(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
+    tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_repeats=True, remove_short=True)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+
+    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_repeats=True, remove_short=True)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+
+    return train_x, train_y, test_x, test_y
+
+@Cachable("full_bag_of_words_save_missing.pkl", version=1)
+def bag_of_words_full_save_missing(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
+    tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=True)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+
+    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
     test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
 
     return train_x, train_y, test_x, test_y
@@ -22,7 +72,7 @@ def doc2vec_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
     train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw)
 
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
+    tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
     test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
 
     return train_x, train_y, test_x, test_y
@@ -46,7 +96,7 @@ def doc2vec_simple_4096(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
     train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw, vector_size=4096)
 
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
+    tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
     test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model, vector_size=4096)
 
     return train_x, train_y, test_x, test_y
@@ -70,7 +120,7 @@ def doc2vec_simple_8192(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
     train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw, vector_size=8192)
 
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
+    tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
     test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model, vector_size=8192)
 
     return train_x, train_y, test_x, test_y
@@ -94,7 +144,7 @@ def doc2vec_simple_16384(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
     train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw, vector_size=16384)
 
-    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
+    tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
     test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model, vector_size=16384)
 
     return train_x, train_y, test_x, test_y

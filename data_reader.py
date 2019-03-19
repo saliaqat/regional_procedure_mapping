@@ -23,8 +23,18 @@ class DataReader:
 
         self.df = pd.concat(self.df_list[0], axis=0, ignore_index=True)
 
-        df = pd.read_csv('input_data/region_labels/regional_labels.csv', index_col=None, header=0, sep=',')
-        self.regional_df = df
+        if os.path.isfile('input_data/region_labels/regional_labels.csv'):
+            df = pd.read_csv('input_data/region_labels/regional_labels.csv', index_col=None, header=0, sep=',')
+            self.regional_df = df
+        else:
+            print('File not found: input_data/region_labels/regional_labels.csv. Exiting...')
+            exit()
+
+        if os.path.isfile('input_data/east_dir/DICS Maps_GTAW_HDIRS_20190306.csv'):
+            self.east_dir = pd.read_csv('input_data/east_dir/DICS Maps_GTAW_HDIRS_20190306.csv', sep=',', header=0)
+        else:
+            print('File not found: input_data/east_dir/DICS Maps_GTAW_HDIRS_20190306.csv . Exiting...')
+            exit()
 
 
     # PUBLIC INTERFACE BELOW #
@@ -47,3 +57,6 @@ class DataReader:
 
     def get_region_labels(self):
         return self.regional_df
+
+    def get_east_dir(self):
+        return self.east_dir
