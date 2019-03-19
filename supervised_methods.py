@@ -60,11 +60,32 @@ def supervised_scratch():
 
     train_x, train_y, test_x, test_y = bag_of_words_full(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
 
-    for batch_size in [128]:
-        model  = _get_nn_model_bag_of_words_simple_v2(train_x, train_y, data_reader.get_region_labels()['Code'],
-                                                      epochs=100, batch_size=batch_size)
+    model  = _get_nn_model_bag_of_words_simple_v2(train_x, train_y, data_reader.get_region_labels()['Code'],
+                                                      epochs=30, batch_size=128)
+
+    evaluate_model_nn(model, test_x, test_y, plot_roc=False)
+
+    from IPython import embed
+    embed()
+    tokens_train, _ = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
+    _, _, feature_names = tokens_to_bagofwords(tokens_train, _)
+
+    tokens, _ = tokenize(unlabelled_df, _, save_missing_feature_as_string=False)
+    semi_x_base, _, _ = tokens_to_bagofwords(tokens, _, feature_names=feature_names)
+    train_threshold = 0.99
+
+    for i in range(10):
+        m = model.model
+        pred = m.predict(semi_x_base)
+        semi_y = np.zeros_like(pred)
+        semi_y[np.arange(len(pred)), pred.argmax(1)] = 1
+        semi_y = semi_y[pred.max(axis=1) > train_threshold]
+        semi_x = semi_x_base[pred.max(axis=1) > train_threshold]
+
+        m.fit(semi_x, semi_y, batch_size=128, epochs=50)
 
         evaluate_model_nn(model, test_x, test_y, plot_roc=False)
+        semi_x_base = semi_x_base[~(pred.max(axis=1) > train_threshold)]
 
     from IPython import embed
     embed()
