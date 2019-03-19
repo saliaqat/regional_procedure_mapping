@@ -6,6 +6,8 @@ import keras
 from keras.layers import Input,Conv2D,MaxPooling2D,UpSampling2D
 from keras.models import Model
 from keras.optimizers import RMSprop
+from cluster_by_site import Cluster
+from sklearn.cluster import KMeans
 
 import warnings
 
@@ -16,10 +18,11 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     fxn()
 
-def run_autoencoder(train_x, train_y, test_x, test_y, feature_names):
+def run_autoencoder(train_x_raw, train_x, train_y, test_x, test_y, feature_names):
+
+    print(train_x_raw[:10])
     # run autoencoder
     vocab_size = len(feature_names)
-    print(train_x[0].shape)
     # this is the size of our encoded representations
     encoding_dim = 100  # 32 floats -> compression of factor 24.5, assuming the input is 784 floats
 
@@ -28,7 +31,7 @@ def run_autoencoder(train_x, train_y, test_x, test_y, feature_names):
     # "encoded" is the encoded representation of the input
     encoded = Dense(encoding_dim, activation='relu')(input_sequence)
     # "decoded" is the lossy reconstruction of the input
-    decoded = Dense(vocab_size, activation='sigmoid')(encoded)
+    decoded = Dense(vocab_size, activation='softmax')(encoded)
 
     # this model maps an input to its reconstruction
     autoencoder = Model(input_sequence, decoded)
@@ -43,20 +46,66 @@ def run_autoencoder(train_x, train_y, test_x, test_y, feature_names):
     decoder_layer = autoencoder.layers[-1]
     # create the decoder model
     decoder = Model(encoded_input, decoder_layer(encoded_input))
-    autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
+    autoencoder.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
 
     autoencoder.fit(train_x, train_x,
-                epochs=5,
+                epochs=100,
                 batch_size=250,
                 shuffle=True,
                 validation_data=(test_x, test_x))
 
     # encode and decode some digits
     # note that we take them from the *test* set
-    encoded_sentences = encoder.predict(test_x)
+    encoded_sentences = encoder.predict(train_x)
     decoded_sentences = decoder.predict(encoded_sentences)
+    #print(train_x[0])
+    #print(np.where(decoded_sentences[0] == max(decoded_sentences[0])))
+    top_5_idx = np.argsort(decoded_sentences[0])[-5:]
+    top_5_values = [decoded_sentences[0][i] for i in top_5_idx]
+    #print(top_5_idx)
+    #print(decoded_sentences[0])
+   #    print(decoded_sentences[0][np.where(decoded_sentences[0] == max(decoded_sentences[0]))])
+    # run clustering
+    num_clusters = 10
+    kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(encoded_sentences[:500])
+    labels = kmeans.labels_
+    cluster = Cluster(kmeans, None, encoded_sentences, labels)
 
-    print(encoded_sentences.shape)
+    # run a query
+    regex_string=r'[a-zA-Z0-9]+'
+    tokenizer = RegexpTokenizer(regex_string)
+
+    # get representation (bag of words)
+    query = "Y DIR - ANGIOGRAM"
+    tokens = tokenizer.tokenize(query.lower())
+    weights, y, _ = tokens_to_bagofwords([tokens, ], 1, CountVectorizer, feature_names)
+    encoded_test_x = encoder.predict(weights)
+    neighbours, neighbours_idx = cluster.get_nearest_neighbours(encoded_test_x)
+    for n in neighbours:
+        decoded_neighbour = decoder.predict(n.reshape(1,encoding_dim))
+        print(decoded_neighbour.shape)
+        top_5_idx = np.argsort(decoded_neighbour)[0][-5:]
+        top_5_values = [decoded_neighbour[0][i] for i in top_5_idx]
+        print(top_5_idx)
+        bow = ""
+        for i in top_5_idx:
+            bow += feature_names[i] + " "
+        print(bow)
+        print(decoder.predict(n.reshape(1,encoding_dim)).shape)
+    exit(0)
+    #print(neighbours_idx)
+    #print(train_x[neighbours_idx])
+    for n in neighbours_idx[0]:
+        print(n)
+        feature_idx = np.where(train_x[n].toarray()[0] > 0)[0]
+        print(feature_idx)
+        if len(feature_idx) > 0 :
+            for i in feature_idx:
+                print(feature_names[i])
+        print(train_x[n].shape)
+        print(type(train_x[n]))
+    #print(neighbours_idx)
+    #cluster.get_nearest_neighbours("Y DIR - ANGIOGRAM")
 
 def main():
 	# get data
@@ -70,13 +119,14 @@ def main():
     test_x_raw = test_x_raw.drop("RIS PROCEDURE CODE", axis=1)
 
     # tokenize and bag of words it
-    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
+    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, False, r'[a-zA-Z0-9]+',True, True)
+    print(tokens.shape)
     train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
-    tokens1, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
+    tokens1, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, False , r'[a-zA-Z0-9]+',True, True)
     test_x, test_y, _ = tokens_to_bagofwords(tokens1, train_y_raw, CountVectorizer, feature_names)
-
+    print(train_x.shape)
     # start autoencoder
-    run_autoencoder(train_x, train_y, test_x, test_y, feature_names)
+    run_autoencoder(train_x_raw, train_x, train_y, test_x, test_y, feature_names)
 
 if __name__ == '__main__':
     main()
