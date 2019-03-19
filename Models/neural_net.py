@@ -10,7 +10,7 @@ from keras.utils import to_categorical
 from sklearn.preprocessing import OneHotEncoder
 
 class NeuralNet(Model):
-    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=1):
+    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=50):
         self.batch_size = batch_size
         self.epochs = epochs
 
@@ -26,28 +26,28 @@ class NeuralNet(Model):
         self.encoder = encoder
 
     def set_train_data(self, x, y):
-        x = x.A.reshape(x.shape[0], 1, x.shape[1])
+        # x = x.A.reshape(x.shape[0], 1, x.shape[1])
         y = self.encoder.transform(y)
 
         self.train_x = x
         self.train_y = y
 
     def set_test_data(self, x, y):
-        x = x.A.reshape(x.shape[0], 1, x.shape[1])
+        # x = x.A.reshape(x.shape[0], 1, x.shape[1])
         y = self.encoder.transform(y)
 
         self.test_x = x
         self.test_y = y
 
     def set_train_data_np(self, x, y):
-        x = x.reshape(x.shape[0], 1, x.shape[1])
+        # x = x.reshape(x.shape[0], 1, x.shape[1])
         y = self.encoder.transform(y)
 
         self.train_x = x
         self.train_y = y
 
     def set_test_data_np(self, x, y):
-        x = x.reshape(x.shape[0], 1, x.shape[1])
+        # x = x.reshape(x.shape[0], 1, x.shape[1])
         y = self.encoder.transform(y)
 
         self.test_x = x
@@ -71,7 +71,7 @@ class NeuralNet(Model):
 
 class MultiClassSimpleCNN(NeuralNet):
     def __init__(self, in_shape, regional_labels, batch_size=64, epochs=1):
-        NeuralNet.__init__(self, in_shape, regional_labels, batch_size, epochs)
+        NeuralNet.__init__(self, in_shape, regional_labels, batch_size, epochs, batch_size=batch_size)
 
         features = in_shape[1]
 
@@ -102,20 +102,50 @@ class MultiClassSimpleCNN(NeuralNet):
         self.name = 'multiclassSimpleCNN'
 
 class MultiClassSimpleNN(NeuralNet):
-    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=5):
-        NeuralNet.__init__(self, in_shape, regional_labels)
+    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=50):
+        NeuralNet.__init__(self, in_shape, regional_labels, epochs=epochs, batch_size=batch_size)
 
         features = in_shape[1]
 
-        inputs = Input(shape=(1, features), name="input")
+        inputs = Input(shape=(features, ), name="input")
 
-        x = Dense(2048, activation="relu", name="dense1")(inputs)
-        x = Dense(3072, activation="relu", name="dense2")(x)
+        x = Dense(4096, activation="relu", name="dense1")(inputs)
+        x = Dense(4096, activation="relu", name="dense2")(x)
         x = Dense(4096, activation="relu", name="dense3")(x)
-        x = Dense(3072, activation="relu", name="dense4")(x)
+        x = Dense(4096, activation="relu", name="dense4")(x)
         x = Dense(2048, activation="relu", name="dense5")(x)
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)
         self.model.compile(optimizer="adam", loss='binary_crossentropy', metrics=["acc"])
         self.name = 'multiclassSimpleNN'
+
+class MultiClassNN(NeuralNet):
+    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=50):
+        NeuralNet.__init__(self, in_shape, regional_labels, epochs=epochs, batch_size=batch_size)
+
+        features = in_shape[1]
+
+        inputs = Input(shape=(features, ), name="input")
+
+        # x = Dense(2048, activation="relu", name="dense1")(inputs)
+        y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(inputs)
+
+        self.model = kerasModel(inputs, y)
+        self.model.compile(optimizer="adam", loss='binary_crossentropy', metrics=["acc"])
+        self.name = 'multiclassNN'
+
+class MultiClassNNBig(NeuralNet):
+    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=50):
+        NeuralNet.__init__(self, in_shape, regional_labels, epochs=epochs)
+
+        features = in_shape[1]
+
+        inputs = Input(shape=(features, ), name="input")
+
+        x = Dense(8192, activation="relu", name="dense1")(inputs)
+        y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
+
+        self.model = kerasModel(inputs, y)
+        self.model.compile(optimizer="adam", loss='binary_crossentropy', metrics=["acc"])
+        self.name = 'multiclassNN'
