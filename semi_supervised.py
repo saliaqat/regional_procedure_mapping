@@ -39,10 +39,10 @@ data_reader = DataReader()
 df = data_reader.get_all_data()
 train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=True)
+tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=True, remove_empty=True, remove_num=True)
 train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
 
-tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=True)
+tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=True, remove_empty=True, remove_num=True)
 test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
 
 # encode the labels into smaller integers rather than large integers
@@ -56,7 +56,7 @@ x = np.concatenate((train_x.todense(), test_x.todense()))
 y = np.concatenate((train_y, test_y))
 
 # no. of classes
-limit = 1000
+limit = 500
 
 # this function creates pair between same class and different class with
 # appropriate targets    
