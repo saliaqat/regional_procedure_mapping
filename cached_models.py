@@ -3,7 +3,7 @@ import numpy as np
 from Models.logistic_regression import BinaryLogisticRegressionModel, MultiClassLogisticRegression
 from Models.random_forest import RandomForest
 from Models.neural_net import MultiClassSimpleCNN
-from Models.neural_net import MultiClassSimpleNN, MultiClassNN
+from Models.neural_net import MultiClassSimpleNN, MultiClassNN, MultiClassNNScratch
 from Models.naive_bayes import NaiveBayes, MultinomialNaiveBayes
 from Models.model import Model
 from Models.svm import SVM
@@ -20,6 +20,14 @@ def _get_multiclass_logistic_regression_model_bag_of_words_simple(train_x, train
 @Cachable("get_multiclass_logistic_regression_model_bag_of_words_full_no_repeat_no_short.pkl", version=1)
 def _get_multiclass_logistic_regression_model_bag_of_words_full_no_repeat_no_short(train_x, train_y):
     lg = MultiClassLogisticRegression(name='multiclass_logistic_regression_bag_of_words_full_no_repeat_no_short')
+    lg.train(train_x, train_y)
+
+    return lg
+
+# 0.7189093628884204
+@Cachable("get_multiclass_logistic_regression_model_bag_of_words_full_no_empty.pkl", version=1)
+def _get_multiclass_logistic_regression_model_bag_of_words_full_no_empty(train_x, train_y):
+    lg = MultiClassLogisticRegression(name='multiclass_logistic_regression_bag_of_words_full_no_empty')
     lg.train(train_x, train_y)
 
     return lg
@@ -146,6 +154,20 @@ def _get_nn_model_bag_of_words_simple_v2(train_x, train_y, labels, epochs=50, ba
     model = MultiClassNN(train_x.shape, np.array(labels), epochs=epochs, batch_size=batch_size)
     model.set_train_data(train_x, train_y)
     model.train()
+    return model
+
+# @Cachable("get_nn_model_bag_of_words_simple_v2.pkl", version=1)
+def _get_nn_model_bag_of_words_simple_scratch(train_x, train_y, val_x, val_y, labels, epochs=50, batch_size=64):
+    model = MultiClassNNScratch(train_x.shape, np.array(labels), epochs=epochs, batch_size=batch_size)
+    model.set_train_data(train_x, train_y)
+    model.train(val_x, val_y)
+    return model
+
+# @Cachable("get_nn_model_bag_of_words_simple_v2.pkl", version=1)
+def _get_nn_model_bag_of_words_simple_scratch_auto(train_x, train_y, val_x, val_y, labels, epochs=50, batch_size=64):
+    model = MultiClassNNScratchAuto(train_x.shape, np.array(labels), epochs=epochs, batch_size=batch_size)
+    model.set_train_data(train_x, train_y)
+    model.train(val_x, val_y)
     return model
 
 # @Cachable("get_nn_model_bag_of_words_simple_v2.pkl", version=1)

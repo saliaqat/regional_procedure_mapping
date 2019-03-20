@@ -5,8 +5,11 @@ from Models.model import Model
 from keras.layers import Conv1D, Flatten, Dropout, MaxPooling1D, GRU, RNN
 from keras.layers import Input
 from keras.layers import Dense
+from keras.layers import RNN, SimpleRNN
 from keras.models import Model as kerasModel
 from keras.utils import to_categorical
+from keras.metrics import top_k_categorical_accuracy
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.preprocessing import OneHotEncoder
 
 class NeuralNet(Model):
@@ -54,7 +57,7 @@ class NeuralNet(Model):
         self.test_y = y
 
     def train(self):
-        self.model.fit(self.train_x, self.train_y, batch_size=self.batch_size, epochs=self.epochs)
+            self.model.fit(self.train_x, self.train_y, batch_size=self.batch_size, epochs=self.epochs)
 
     def predict(self):
         self.predict_y = self.model.predict(self.test_x)
@@ -137,7 +140,7 @@ class MultiClassNN(NeuralNet):
 
 class MultiClassNNBig(NeuralNet):
     def __init__(self, in_shape, regional_labels, batch_size=64, epochs=50):
-        NeuralNet.__init__(self, in_shape, regional_labels, epochs=epochs)
+        NeuralNet.__init__(self, in_shape, regional_labels, epochs=epochs, batch_size=batch_size)
 
         features = in_shape[1]
 
@@ -149,3 +152,81 @@ class MultiClassNNBig(NeuralNet):
         self.model = kerasModel(inputs, y)
         self.model.compile(optimizer="adam", loss='binary_crossentropy', metrics=["acc"])
         self.name = 'multiclassNN'
+
+class MultiClassNNScratch(NeuralNet):
+    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=50):
+        NeuralNet.__init__(self, in_shape, regional_labels, epochs=epochs, batch_size=batch_size)
+
+        features = in_shape[1]
+
+        inputs = Input(shape=(1, features), name="input")
+
+        x = SimpleRNN(4096, activation="relu", name="RNN1")(inputs)
+        y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
+
+        self.model = kerasModel(inputs, y)
+        self.model.compile(optimizer="adam", loss='categorical_crossentropy', metrics=["acc", top_3_accuracy, top_k_categorical_accuracy])
+        self.name = 'multiclassNNScratch'
+
+    def set_train_data(self, x, y):
+        x = x.A.reshape(x.shape[0], 1, x.shape[1])
+        y = self.encoder.transform(y)
+
+        self.train_x = x
+        self.train_y = y
+
+    def set_test_data(self, x, y):
+        x = x.A.reshape(x.shape[0], 1, x.shape[1])
+        y = self.encoder.transform(y)
+
+        self.test_x = x
+        self.test_y = y
+
+    def train(self, val_x, val_y):
+        val_x =val_x.A.reshape(val_x.shape[0], 1, val_x.shape[1])
+        callbacks = [EarlyStopping(monitor='val_loss', patience=2),
+                     ModelCheckpoint(filepath='best_nn_model_%s.h5' % self.name, monitor='val_loss',
+                                     save_best_only=True)]
+        self.model.fit(self.train_x, self.train_y, batch_size=self.batch_size, epochs=self.epochs,
+                       callbacks=callbacks, validation_data=(val_x, self.encoder.transform(val_y)))
+
+class MultiClassNNScratchAuto(NeuralNet):
+    def __init__(self, in_shape, regional_labels, batch_size=64, epochs=50):
+        NeuralNet.__init__(self, in_shape, regional_labels, epochs=epochs, batch_size=batch_size)
+
+        features = in_shape[1]
+
+        inputs = Input(shape=(1, features), name="input")
+
+        x = SimpleRNN(4096, activation="relu", name="RNN1")(inputs)
+        y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
+
+        self.model = kerasModel(inputs, y)
+        self.model.compile(optimizer="adam", loss='categorical_crossentropy', metrics=["acc", top_3_accuracy, top_k_categorical_accuracy])
+        self.name = 'multiclassNNScratch'
+
+    def set_train_data(self, x, y):
+        x = x.reshape(x.shape[0], 1, x.shape[1])
+        y = self.encoder.transform(y)
+
+        self.train_x = x
+        self.train_y = y
+
+    def set_test_data(self, x, y):
+        x = x.reshape(x.shape[0], 1, x.shape[1])
+        y = self.encoder.transform(y)
+
+        self.test_x = x
+        self.test_y = y
+
+    def train(self, val_x, val_y):
+        val_x =val_x.reshape(val_x.shape[0], 1, val_x.shape[1])
+        callbacks = [EarlyStopping(monitor='val_loss', patience=2),
+                     ModelCheckpoint(filepath='best_nn_model_%s.h5' % self.name, monitor='val_loss',
+                                     save_best_only=True)]
+        self.model.fit(self.train_x, self.train_y, batch_size=self.batch_size, epochs=self.epochs,
+                       callbacks=callbacks, validation_data=(val_x, self.encoder.transform(val_y)))
+
+
+def top_3_accuracy(y_true, y_pred):
+    return top_k_categorical_accuracy(y_true, y_pred, k=3)
