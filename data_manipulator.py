@@ -140,7 +140,7 @@ def tokens_to_bagofwords(x, y, vectorizer_class=CountVectorizer, feature_names=N
 
 # Only tokenize subset of data
 def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+', remove_repeats=False,
-                     remove_short=False):
+                     remove_short=False, remove_empty=False, remove_num=False):
     columns = ['RIS PROCEDURE DESCRIPTION', 'PACS PROCEDURE DESCRIPTION', 'PACS STUDY DESCRIPTION', 'PACS BODY PART',
                'PACS MODALITY']
     columns_with_desc = [('RIS PROCEDURE DESCRIPTION', "risprocdesc"),
@@ -169,7 +169,12 @@ def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'
         x['tokens'] = x['tokens'].apply(lambda y: list(set(y)))
     if remove_short:
         x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if len(z) > 1])
-
+    if remove_num:
+        x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if z.isalpha()])
+    if remove_empty:
+        if (len(x[x['tokens'].str.len() == 0]) != 0):
+            y = y[x['tokens'].str.len() != 0]
+            x = x[x['tokens'].str.len() != 0]
     return x['tokens'], y
 
 def normalize_east_dir_df(df):
