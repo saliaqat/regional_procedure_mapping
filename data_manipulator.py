@@ -68,7 +68,8 @@ def get_train_validate_test_split(input_df, random_state=1337, label=label_colum
 # Tokenizer only lower cases the strings. Does no other processing.
 # Optional parameter save_missing_as_feature sets all missing columns to a unique
 # code to save that that column was missing. Default setting removes nans from tokens.
-def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+', remove_repeats=False, remove_short=False):
+def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+', remove_repeats=False,
+             remove_short=False, remove_empty=False):
     x = x[text_columns]
     x[text_columns] = x[text_columns].astype(str)
     tokenizer = RegexpTokenizer(regex_string)
@@ -89,6 +90,10 @@ def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0
         x['tokens'] = x['tokens'].apply(lambda y: list(set(y)))
     if remove_short:
         x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if len(z) > 1])
+    if remove_empty:
+        if (len(x[x['tokens'].str.len() == 0]) != 0):
+            y = y[x['tokens'].str.len() != 0]
+            x = x[x['tokens'].str.len() != 0]
 
 
     return x['tokens'], y
@@ -135,7 +140,7 @@ def tokens_to_bagofwords(x, y, vectorizer_class=CountVectorizer, feature_names=N
 
 # Only tokenize subset of data
 def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+', remove_repeats=False,
-                     remove_short=False):
+                     remove_short=False, remove_empty=False, remove_num=False):
     columns = ['RIS PROCEDURE DESCRIPTION', 'PACS PROCEDURE DESCRIPTION', 'PACS STUDY DESCRIPTION', 'PACS BODY PART',
                'PACS MODALITY']
     columns_with_desc = [('RIS PROCEDURE DESCRIPTION', "risprocdesc"),
@@ -164,7 +169,12 @@ def tokenize_columns(x, y, save_missing_feature_as_string=False, regex_string=r'
         x['tokens'] = x['tokens'].apply(lambda y: list(set(y)))
     if remove_short:
         x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if len(z) > 1])
-
+    if remove_num:
+        x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if z.isalpha()])
+    if remove_empty:
+        if (len(x[x['tokens'].str.len() == 0]) != 0):
+            y = y[x['tokens'].str.len() != 0]
+            x = x[x['tokens'].str.len() != 0]
     return x['tokens'], y
 
 def normalize_east_dir_df(df):
