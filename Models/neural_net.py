@@ -159,9 +159,12 @@ class MultiClassNNScratch(NeuralNet):
 
         features = in_shape[1]
 
-        inputs = Input(shape=(1, features), name="input")
+        inputs = Input(shape=(features, ), name="input")
 
-        x = SimpleRNN(4096, activation="relu", name="RNN1")(inputs)
+        x = Dense(4096, activation="relu", name="dense1")(inputs)
+        x = Dense(4096, activation="relu", name="dense2")(x)
+        x = Dense(4096, activation="relu", name="dense3")(x)
+        x = Dense(4096, activation="relu", name="dense4")(x)
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)
@@ -169,21 +172,21 @@ class MultiClassNNScratch(NeuralNet):
         self.name = 'multiclassNNScratch'
 
     def set_train_data(self, x, y):
-        x = x.A.reshape(x.shape[0], 1, x.shape[1])
+        # x = x.A.reshape(x.shape[0], 1, x.shape[1])
         y = self.encoder.transform(y)
 
         self.train_x = x
         self.train_y = y
 
     def set_test_data(self, x, y):
-        x = x.A.reshape(x.shape[0], 1, x.shape[1])
+        # x = x.A.reshape(x.shape[0], 1, x.shape[1])
         y = self.encoder.transform(y)
 
         self.test_x = x
         self.test_y = y
 
     def train(self, val_x, val_y):
-        val_x =val_x.A.reshape(val_x.shape[0], 1, val_x.shape[1])
+        # val_x =val_x.A.reshape(val_x.shape[0], 1, val_x.shape[1])
         callbacks = [EarlyStopping(monitor='val_loss', patience=2),
                      ModelCheckpoint(filepath='best_nn_model_%s.h5' % self.name, monitor='val_loss',
                                      save_best_only=True)]

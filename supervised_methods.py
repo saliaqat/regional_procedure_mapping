@@ -52,6 +52,9 @@ def main():
     # load_data()
 
 def supervised_scratch():
+    neural_net_scratch_bag_of_words()
+
+def auto_encoder_and_nn():
     data_reader = DataReader()
     df = data_reader.get_all_data()
 
@@ -61,13 +64,13 @@ def supervised_scratch():
                                                                                     test_y_raw)
 
     encoder, decoder = get_encoder(train_x, test_x, 2048)
-    from IPython import embed
-    embed()
+    # from IPython import embed
+    # embed()
     encoded_train = encoder.predict(train_x)
     encoded_test = encoder.predict(test_x)
     encoded_val = encoder.predict(val_x)
 
-    model = _get_nn_model_bag_of_words_simple_scratch_auto(encoded_train, train_y, encoded_val, val_y,
+    model = _get_nn_model_bag_of_words_simple_scratch(encoded_train, train_y, encoded_val, val_y,
                                                       data_reader.get_region_labels()['Code'], epochs=100,
                                                       batch_size=256)
 
@@ -86,7 +89,7 @@ def neural_net_scratch_bag_of_words():
 
     model = _get_nn_model_bag_of_words_simple_scratch(train_x, train_y, val_x, val_y,
                                                       data_reader.get_region_labels()['Code'], epochs=100,
-                                                      batch_size=256)
+                                                      batch_size=64)
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 

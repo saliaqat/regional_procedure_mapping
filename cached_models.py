@@ -3,7 +3,7 @@ import numpy as np
 from Models.logistic_regression import BinaryLogisticRegressionModel, MultiClassLogisticRegression
 from Models.random_forest import RandomForest
 from Models.neural_net import MultiClassSimpleCNN
-from Models.neural_net import MultiClassSimpleNN, MultiClassNN, MultiClassNNScratch
+from Models.neural_net import MultiClassSimpleNN, MultiClassNN, MultiClassNNScratch, MultiClassNNScratchAuto
 from Models.naive_bayes import NaiveBayes, MultinomialNaiveBayes
 from Models.model import Model
 from Models.svm import SVM
