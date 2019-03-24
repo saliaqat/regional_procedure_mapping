@@ -101,7 +101,7 @@ class MultiClassSimpleCNN(NeuralNet):
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)
-        self.model.compile(optimizer="adam", loss='binary_crossentropy', metrics=["acc"])
+        self.model.compile(optimizer="adam", loss='categorial_crossentropy', metrics=["acc"])
         self.name = 'multiclassSimpleCNN'
 
 class MultiClassSimpleNN(NeuralNet):
@@ -120,7 +120,7 @@ class MultiClassSimpleNN(NeuralNet):
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)
-        self.model.compile(optimizer="adam", loss='binary_crossentropy', metrics=["acc"])
+        self.model.compile(optimizer="adam", loss='categorial_crossentropy', metrics=["acc"])
         self.name = 'multiclassSimpleNN'
 
 class MultiClassNN(NeuralNet):
@@ -135,7 +135,7 @@ class MultiClassNN(NeuralNet):
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(inputs)
 
         self.model = kerasModel(inputs, y)
-        self.model.compile(optimizer="adam", loss='binary_crossentropy', metrics=["acc"])
+        self.model.compile(optimizer="adam", loss='categorial_crossentropy', metrics=["acc"])
         self.name = 'multiclassNN'
 
 class MultiClassNNBig(NeuralNet):
@@ -150,7 +150,7 @@ class MultiClassNNBig(NeuralNet):
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)
-        self.model.compile(optimizer="adam", loss='binary_crossentropy', metrics=["acc"])
+        self.model.compile(optimizer="adam", loss='categorial_crossentropy', metrics=["acc"])
         self.name = 'multiclassNN'
 
 class MultiClassNNScratch(NeuralNet):
@@ -161,10 +161,8 @@ class MultiClassNNScratch(NeuralNet):
 
         inputs = Input(shape=(features, ), name="input")
 
-        x = Dense(4096, activation="relu", name="dense1")(inputs)
+        x = Dense(8192, activation="relu", name="dense1")(inputs)
         x = Dense(4096, activation="relu", name="dense2")(x)
-        x = Dense(4096, activation="relu", name="dense3")(x)
-        x = Dense(4096, activation="relu", name="dense4")(x)
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)
@@ -187,7 +185,7 @@ class MultiClassNNScratch(NeuralNet):
 
     def train(self, val_x, val_y):
         # val_x =val_x.A.reshape(val_x.shape[0], 1, val_x.shape[1])
-        callbacks = [EarlyStopping(monitor='val_loss', patience=2),
+        callbacks = [EarlyStopping(monitor='val_loss', patience=10),
                      ModelCheckpoint(filepath='best_nn_model_%s.h5' % self.name, monitor='val_loss',
                                      save_best_only=True)]
         self.model.fit(self.train_x, self.train_y, batch_size=self.batch_size, epochs=self.epochs,

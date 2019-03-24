@@ -42,34 +42,80 @@ from cached_models import _get_multinomial_naive_bayes_model_bag_of_words_full
 from cached_models import _get_multinomial_naive_bayes_model_bag_of_words_full_save_missing
 from run_autoencoder import get_encoder
 
+import keras.backend.tensorflow_backend as ktf
+import tensorflow as tf
+
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from keras.utils import np_utils
+
+
 import warnings
 warnings.filterwarnings("ignore")
 
 # What Salaar is working on.
 
 def main():
-    supervised_scratch()
-    # load_data()
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    ktf.set_session(tf.Session(config=config))
+    neural_net_scratch_bag_of_words(bag_of_words_full_no_empty_val)
+    # supervised_scratch()
 
 def supervised_scratch():
-    neural_net_scratch_bag_of_words()
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+
+    train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
+    train_x, train_y, val_x, val_y, test_x, test_y = bag_of_words_full_no_empty_val_no_num_no_short_no_repeat(train_x_raw, train_y_raw,
+                                                                                    val_x_raw, val_y_raw, test_x_raw,
+                                                                                    test_y_raw)
+
+    encoder = get_encoder(train_x, test_x, int(len(data_reader.get_region_labels()['Code'])))
+    encoded_train = encoder.predict(train_x)
+    encoded_test = encoder.predict(test_x)
+    encoded_val = encoder.predict(val_x)
+
+    from IPython import embed
+    embed()
+
+    pca = PCA(n_components=20)
+    pca_result = pca.fit_transform(encoded_test)
+    tsne = TSNE(n_components=2, verbose=1)
+    tsne_results = tsne.fit_transform(pca_result)
+
+    test_y_shift = test_y - test_y.min()
+
+    y_test_cat = np_utils.to_categorical(test_y_shift, num_classes=int(test_y_shift.max()) +1)
+
+    import matplotlib.pyplot as plt
+
+    color_map = np.argmax(y_test_cat, axis=1)
+    plt.figure(figsize=(10, 10))
+    for cl in range(data_reader.get_region_labels()['Code']):
+        indices = np.where(test_y == cl)
+        indices = indices[0]
+        plt.scatter(tsne_results[indices, 0], tsne_results[indices, 1], label=cl)
+    plt.legend()
+    plt.savefig('tsne.png')
+    plt.show()
 
 def auto_encoder_and_nn():
     data_reader = DataReader()
     df = data_reader.get_all_data()
 
     train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
-    train_x, train_y, val_x, val_y, test_x, test_y = bag_of_words_full_no_empty_val(train_x_raw, train_y_raw,
+    train_x, train_y, val_x, val_y, test_x, test_y = tfidf_no_empty_val(train_x_raw, train_y_raw,
                                                                                     val_x_raw, val_y_raw, test_x_raw,
                                                                                     test_y_raw)
 
     encoder, decoder = get_encoder(train_x, test_x, 2048)
-    # from IPython import embed
-    # embed()
     encoded_train = encoder.predict(train_x)
     encoded_test = encoder.predict(test_x)
     encoded_val = encoder.predict(val_x)
 
+    from IPython import embed
+    embed()
     model = _get_nn_model_bag_of_words_simple_scratch(encoded_train, train_y, encoded_val, val_y,
                                                       data_reader.get_region_labels()['Code'], epochs=100,
                                                       batch_size=256)
@@ -77,19 +123,22 @@ def auto_encoder_and_nn():
     evaluate_model_nn(model, encoded_test, test_y, plot_roc=False)
 
 
-def neural_net_scratch_bag_of_words():
+def neural_net_scratch_bag_of_words(function):
     data_reader = DataReader()
     df = data_reader.get_all_data()
 
     train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
 
-    train_x, train_y, val_x, val_y, test_x, test_y = bag_of_words_full_no_empty_val(train_x_raw, train_y_raw,
+    train_x, train_y, val_x, val_y, test_x, test_y = function(train_x_raw, train_y_raw,
                                                                                     val_x_raw, val_y_raw, test_x_raw,
                                                                                     test_y_raw)
 
     model = _get_nn_model_bag_of_words_simple_scratch(train_x, train_y, val_x, val_y,
                                                       data_reader.get_region_labels()['Code'], epochs=100,
-                                                      batch_size=64)
+                                                      batch_size=128)
+
+    from IPython import embed
+    embed()
 
     evaluate_model_nn(model, test_x, test_y, plot_roc=False)
 

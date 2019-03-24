@@ -62,6 +62,31 @@ def get_train_validate_test_split(input_df, random_state=1337, label=label_colum
 
     return train_x, train_y, validation_x, validation_y, test_x, test_y
 
+# def get_train_validate_test_split_remove_low_occurance_classes(input_df, random_state=1337, label=label_columns, test_size=0.125,
+#                                   validation_split=0.125):
+#     # dropping src_file since its is not a feature
+#     df = input_df.drop('src_file', axis=1)
+#
+#     first_split = test_size + validation_split
+#     second_split = validation_split / first_split
+#
+#     train, test_validation = train_test_split(df, random_state=random_state, test_size=first_split, shuffle=True)
+#     test, validation = train_test_split(test_validation, random_state=random_state, test_size=second_split,
+#                                         shuffle=True)
+#
+#     train_x = train.drop(label, axis=1)
+#     train_y = train[label]
+#     validation_x = validation.drop(label, axis=1)
+#     validation_y = validation[label]
+#     test_x = test.drop(label, axis=1)
+#     test_y = test[label]
+#
+#     from IPython import embed
+#     embed()
+#
+#     return train_x, train_y, validation_x, validation_y, test_x, test_y
+
+
 # Takes as input features as x, and labels as y.
 # Returns a pandas series containing the all features tokenized in a list for each row
 # Tokenizer considers alphanumeric characters only (can specify using parameters)
@@ -69,7 +94,7 @@ def get_train_validate_test_split(input_df, random_state=1337, label=label_colum
 # Optional parameter save_missing_as_feature sets all missing columns to a unique
 # code to save that that column was missing. Default setting removes nans from tokens.
 def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0-9]+', remove_repeats=False,
-             remove_short=False, remove_empty=False):
+             remove_short=False, remove_empty=False, remove_num=False):
     x = x[text_columns]
     x[text_columns] = x[text_columns].astype(str)
     tokenizer = RegexpTokenizer(regex_string)
@@ -94,7 +119,8 @@ def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0
         if (len(x[x['tokens'].str.len() == 0]) != 0):
             y = y[x['tokens'].str.len() != 0]
             x = x[x['tokens'].str.len() != 0]
-
+    if remove_num:
+        x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if not z.isdigit()])
 
     return x['tokens'], y
 

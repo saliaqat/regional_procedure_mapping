@@ -7,12 +7,13 @@ from keras.layers import Input,Conv2D,MaxPooling2D,UpSampling2D
 from sklearn import preprocessing
 from keras.optimizers import RMSprop
 
-from cluster_by_site import Cluster
+# from cluster_by_site import Cluster
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from Models.logistic_regression import *
 from keras.models import Model
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 import warnings
 
@@ -151,15 +152,29 @@ def get_encoder(train_x, test_x, dim):
 
     # this is  input placeholder
     input_sequence = Input(shape=(vocab_size,))
+    print(train_x.shape)
+
+    layer_one_size = int(encoding_dim + (2 * ((vocab_size - encoding_dim) / 3)))
+    layer_two_size = int(encoding_dim + (1 * ((vocab_size - encoding_dim) / 3)))
+
+    other_layer_size = int(encoding_dim + (1 * ((vocab_size - encoding_dim) /8)))
 
     # "encoded" is the encoded representation of the input
-    encoded = Dense(encoding_dim, activation='relu')(input_sequence)
+    x = Dense(other_layer_size, activation='relu', name='enc_dense_1')(input_sequence)
+    # x = Dense(layer_one_size, activation='relu', name='enc_dense_1')(input_sequence)
+    # x = Dense(layer_two_size, activation='relu', name='enc_dense_2')(x)
+
+    encoded = Dense(encoding_dim, activation='relu', name='encoded')(x)
+
+    y = Dense(other_layer_size, activation='relu', name='dec_dense_1')(encoded)
+    # y = Dense(layer_two_size, activation='relu', name='dec_dense_1')(encoded)
+    # y = Dense(layer_one_size, activation='relu', name='dec_dense_2')(y)
 
     # "decoded" is the lossy reconstruction of the input
-    decoded = Dense(vocab_size, activation='sigmoid')(encoded)
+    decoded = Dense(vocab_size, activation='sigmoid', name='output')(y)
 
     # this model maps an input to its reconstruction
-    autoencoder = Model(input_sequence, decoded)
+    autoencoder = Model(inputs=input_sequence, outputs=decoded)
     autoencoder.summary()
 
     # this model maps an input to its encoded representation
@@ -169,19 +184,23 @@ def get_encoder(train_x, test_x, dim):
     encoded_input = Input(shape=(encoding_dim,))
 
     # retrieve the last layer of the autoencoder model
-    decoder_layer = autoencoder.layers[-1]
+    # decoder_layer = autoencoder.layers[-1]
 
     # create the decoder model
-    decoder = Model(encoded_input, decoder_layer(encoded_input))
-    autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
+    # decoder = Model(encoded_input, decoder_layer)
+    autoencoder.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+
+    callbacks = [EarlyStopping(monitor='val_loss', patience=2),
+                 ModelCheckpoint(filepath='best_autoencoder.h5', monitor='val_loss',
+                                 save_best_only=True)]
 
     autoencoder.fit(train_x, train_x,
-                    epochs=10,
-                    batch_size=250,
+                    epochs=100,
+                    batch_size=128,
                     shuffle=True,
-                    validation_data=(test_x, test_x))
+                    validation_data=(test_x, test_x), callbacks=callbacks)
 
-    return encoder, decoder
-    
+    return encoder
+
 if __name__ == '__main__':
     main()
