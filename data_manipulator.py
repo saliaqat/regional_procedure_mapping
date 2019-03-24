@@ -115,12 +115,13 @@ def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0
         x['tokens'] = x['tokens'].apply(lambda y: list(set(y)))
     if remove_short:
         x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if len(z) > 1])
+    if remove_num:
+        x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if not z.isdigit()])
     if remove_empty:
         if (len(x[x['tokens'].str.len() == 0]) != 0):
             y = y[x['tokens'].str.len() != 0]
             x = x[x['tokens'].str.len() != 0]
-    if remove_num:
-        x['tokens'] = x['tokens'].apply(lambda y: [z for z in y if not z.isdigit()])
+
 
     return x['tokens'], y
 
@@ -151,7 +152,7 @@ def tokens_to_doc2vec(x, y, model=None, vector_size=512, min_count=1, workers=1)
 
         for item in x:
             represented_x.append(model.infer_vector(item))
-        return np.array(represented_x), y
+        return np.array(represented_x), y, model
 
 # Takes as input tokens, labels and a vectorizer and returns the vectorized tokens, labels and feature_names
 # Vectorizer is defaulted to count vectorizer, but can be TfidfVectorizer or any other vectorizer

@@ -59,10 +59,65 @@ def main():
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     ktf.set_session(tf.Session(config=config))
-    neural_net_scratch_bag_of_words(bag_of_words_full_no_empty_val)
-    # supervised_scratch()
+    # neural_net_scratch_bag_of_words(bag_of_words_full_no_empty_val)
+    supervised_scratch()
 
 def supervised_scratch():
+    from Models.logistic_regression import MultiClassLogisticRegression
+    from Models.naive_bayes import NaiveBayes
+    from Models.naive_bayes import MultinomialNaiveBayes
+    from Models.random_forest import RandomForest
+    from Models.svm import SVM
+    from Models.neural_net import MultiClassNNScratch
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+
+    train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
+
+
+    tokenizers = [('repeats, shorts, nums',(lambda x, y: tokenize(x, y, remove_repeats=True, remove_short=True, remove_empty=True, remove_num=True))),
+                 ('repeats, shorts, no nums',(lambda x, y: tokenize(x, y, remove_repeats=True, remove_short=True, remove_empty=True, remove_num=False))),
+                 ('repeats, no shorts, nums',(lambda x, y: tokenize(x, y, remove_repeats=True, remove_short=False, remove_empty=True, remove_num=True))),
+                 ('repeats, no shorts, no nums',(lambda x, y: tokenize(x, y, remove_repeats=True, remove_short=False, remove_empty=True, remove_num=False))),
+                 ('no repeats, shorts, nums',(lambda x, y: tokenize(x, y, remove_repeats=False, remove_short=True, remove_empty=True,remove_num=True))),
+                 ('no repeats, shorts, no nums',(lambda x, y: tokenize(x, y, remove_repeats=False, remove_short=True, remove_empty=True,remove_num=False))),
+                 ('no repeats, no shorts, nums',(lambda x, y: tokenize(x, y, remove_repeats=False, remove_short=False, remove_empty=True, remove_num=True))),
+                 ('no repeats, no shorts, no nums',(lambda x, y: tokenize(x, y, remove_repeats=False, remove_short=False, remove_empty=True, remove_num=False)))]
+    embeddings = [('doc2vec_1024',(lambda x,y,model: tokens_to_doc2vec(x, y, model=model, vector_size=1024))),
+                  ('doc2vec_4196', (lambda x, y, model: tokens_to_doc2vec(x, y, model=model, vector_size=4196))),
+                  ('doc2vec_16384',(lambda x,y,model: tokens_to_doc2vec(x, y, model=model, vector_size=16384))),
+                  ('bagofwords',(lambda x,y, feature_names: tokens_to_bagofwords(x, y, vectorizer_class=CountVectorizer, feature_names=feature_names))),
+                  ('tfidf',(lambda x, y, feature_names: tokens_to_bagofwords(x, y, vectorizer_class=TfidfVectorizer, feature_names=feature_names)))]
+
+    models = [('logistic_regression', MultiClassLogisticRegression), ('naive_bayes', NaiveBayes), ('multinomial_naive_bayes', MultinomialNaiveBayes), ('random_forest', RandomForest), ('svm', SVM), ('nn', MultiClassNNScratch)]
+
+    for tokenizer_name, tokenizer in tokenizers:
+        train_x, train_y = tokenizer(train_x_raw, train_y_raw)
+        val_x, val_y = tokenizer(val_x_raw, val_y_raw)
+        test_x, test_y = tokenizer(test_x_raw, test_y_raw)
+        for embedding_name, embedding in embeddings:
+            emb_train_x, emb_train_y, pass_on = embedding(train_x, train_y, None)
+            emb_val_x, emb_val_y, _ = embedding(val_x, val_y, pass_on)
+            emb_test_x, emb_test_y, _ = embedding(test_x, test_y, pass_on)
+            for model_name, the_model in models:
+                if model_name == 'nn':
+                    print('training: ' + tokenizer_name + ' ' + embedding_name + ' ' + model_name)
+                    model = the_model(train_x.shape, np.array(data_reader.get_region_labels()['Code']), epochs=100,
+                                                    batch_size=256)
+                    model.set_train_data(train_x, train_y)
+                    model.train(val_x, val_y)
+                    print(tokenizer_name + ' ' + embedding_name + ' ' + model_name)
+                    evaluate_model_nn(model, test_x, test_y, plot_roc=False)
+                else:
+                    print('training: ' + tokenizer_name + ' ' + embedding_name + ' ' + model_name)
+                    model = the_model()
+                    model.train(train_x, train_y)
+                    print(tokenizer_name + ' ' + embedding_name + ' ' + model_name)
+                    evaluate_model(model, test_x, test_y, plot_roc=False)
+
+
+
+def autoencoder_tsne():
     data_reader = DataReader()
     df = data_reader.get_all_data()
 
