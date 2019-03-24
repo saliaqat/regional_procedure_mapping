@@ -39,11 +39,11 @@ data_reader = DataReader()
 df = data_reader.get_all_data()
 train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=True, remove_empty=True, remove_num=True)
-train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
+tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True, remove_num=True, remove_repeats=True, remove_short=True)
+train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw, vectorizer_class=CountVectorizer)
 
-tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=True, remove_empty=True, remove_num=True)
-test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
+tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_empty=True, remove_num=True, remove_repeats=True, remove_short=True)
+test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, vectorizer_class=CountVectorizer, feature_names=feature_names)
 
 # encode the labels into smaller integers rather than large integers
 le = preprocessing.LabelEncoder()
@@ -56,7 +56,7 @@ x = np.concatenate((train_x.todense(), test_x.todense()))
 y = np.concatenate((train_y, test_y))
 
 # no. of classes
-limit = 500
+limit = 100
 
 # this function creates pair between same class and different class with
 # appropriate targets    
@@ -86,8 +86,7 @@ def create_pair(labels_dict, labels):
             targets_diff.append(0)
             
             
-    return dataset_sim +dataset_diff, \
-                    targets_sim + targets_diff
+    return dataset_sim + dataset_diff, targets_sim + targets_diff
 
 # create dataset for siamese neural network
 def create_pairwise_dataset(x, y, k=15, train_ratio=0.66, limit=limit):
@@ -131,6 +130,7 @@ def create_pairwise_dataset(x, y, k=15, train_ratio=0.66, limit=limit):
     
     return train_x, test_x, train_y, test_y, labels_dict_train, labels_dict_test
 
+
 train_x, test_x, train_y, test_y = 0, 0, 0, 0
 
 train_paired, test_paired, \
@@ -163,25 +163,14 @@ test_paired_target = np.array(test_paired_target)
 
 # shuffle in unison
 pair1_test, pair2_test, test_paired_target = unison_shuffled_copies(pair1_test, pair2_test, test_paired_target)
- 
-#pair1_train = pair1_train.reshape(-1, 24472)
-#pair2_train = pair2_train.reshape(-1, 24472)  
-#pair1_test = pair1_test.reshape(-1, 24472)
-#pair2_test = pair2_test.reshape(-1, 24472) 
+  
+feature_size = pair1_train.shape[-1]
+pair1_train = pair1_train.reshape(-1, feature_size)
+pair2_train = pair2_train.reshape(-1, feature_size)  
+pair1_test = pair1_test.reshape(-1, feature_size)
+pair2_test = pair2_test.reshape(-1, feature_size)   
 
-pair1_train = pair1_train.reshape(-1, 5592)
-pair2_train = pair2_train.reshape(-1, 5592)  
-pair1_test = pair1_test.reshape(-1, 5592)
-pair2_test = pair2_test.reshape(-1, 5592)   
-
-#np.save(pair1_train)
-#np.save(pair2_train)
-#np.save(pair1_test)
-#np.save(pair2_test)
-#np.save(train_paired_target)
-#np.save(test_paired_target)
-
-# cosine similarity distance metric
+# distance metrics
 def cosine_distance(x, y):
     x = K.l2_normalize(x, axis=-1)
     y = K.l2_normalize(y, axis=-1)
@@ -192,10 +181,6 @@ def jaccard_distance(y_true, y_pred, smooth=100):
     sum_ = K.sum(K.abs(y_true) + K.abs(y_pred), axis=-1, keepdims=True)
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
     return (1 - jac) * smooth
-
-def euclidean_distance(y_true, y_pred):
-    return K.mean(K.sum(K.square(y_true - y_pred)))
-
 
 # siamese neural network structure 
 input_shape = pair1_train.shape[1]
@@ -213,7 +198,7 @@ encoded_l = nnet(left_input)
 encoded_r = nnet(right_input)
 
 #merge two encoded inputs with the l1 distance between them
-distance = lambda x: K.abs(x[0] - x[1])
+distance = lambda x: K.square(x[0] - x[1])
 merge = Lambda(distance)([encoded_l, encoded_r])
 merge = Dense(1, activation='sigmoid')(merge)
 siamese_net = Model(input=[left_input,right_input],output=merge)
@@ -254,20 +239,57 @@ for labelA in sorted(labels_dict_test):
 correct = 0
 total = 0
 for t in test_set:
-    label = -1
-    max_dist = -1
+    outputs = []
+    labels = []
     for s in support_set:
         samples = support_set[s]
         d = 0
         for sample in samples:
             d += siamese_net.predict([sample, test_set[t]])
         distance = d / len(samples)
-        if distance[-1][-1] > max_dist:
-            max_dist = distance[-1][-1]
-            label = s
-    
-    if t == label:
+        outputs.append(distance)
+        labels.append(s)
+    topK = 10
+    idxs = sorted(range(len(outputs)), key=lambda i: outputs[i])[-topK:]
+    possible_labels = []
+    for i in idxs:
+        possible_labels.append(labels[i])
+    if t in possible_labels:
         correct += 1
     total += 1
         
 print('Accuracy: ', correct/total)
+
+from sklearn.neighbors import KNeighborsClassifier
+X = []
+y= []
+counter = 1
+for label in sorted(labels_dict_train):
+    if counter > limit:
+        break
+    samples = labels_dict_train[label]
+    for s in samples:
+        X.append(s)
+        y.append(label)
+    counter += 1
+X = np.array(X)
+X = X.reshape(-1, X.shape[-1])
+
+X_test = []
+y_test = []
+counter = 1
+for label in sorted(labels_dict_test):
+    if counter > limit:
+        break
+    samples = labels_dict_test[label]
+    for s in samples:
+        X_test.append(s)
+        y_test.append(label)
+    counter += 1
+X_test = np.array(X_test)
+X_test = X_test.reshape(-1, X_test.shape[-1])  
+
+
+neigh = KNeighborsClassifier(n_neighbors=15)
+neigh.fit(X, y)
+print('KNN accuracy: ', neigh.score(X_test, y_test))
