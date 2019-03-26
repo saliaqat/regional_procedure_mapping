@@ -27,17 +27,16 @@ warnings.filterwarnings("ignore")
 # en_stop = set(nltk.corpus.stopwords.words('english'))
 from sklearn.cluster import SpectralClustering
 from sklearn.metrics import davies_bouldin_score
+from sklearn.cluster import Birch
 
 
-class Spectral(Model):
+class Birch_(Model):
     def __init__(self, num_clusters, feature_names, train_x, train_y):
-        self.spectral_model = SpectralClustering(n_clusters=num_clusters,
-                                                 random_state=0,
-                                                 assign_labels='discretize').fit(train_x)
+        self.birch_model = Birch(n_clusters=num_clusters).fit(train_x)
         self.feature_names = feature_names
         self.train_x = train_x
         self.train_y = train_y
-        self.labels = self.spectral_model.labels_
+        self.labels = self.birch_model.labels_
         self.num_clusters = num_clusters
         self.sil_score = -100.0
         self.db_idx_score = -100.0
@@ -57,7 +56,7 @@ class Spectral(Model):
 
         # get representation (bag of words)
         weights, y, _ = tokens_to_bagofwords([tokens, ], 1, CountVectorizer, self.feature_names)
-        pred_y = self.spectral_model.predict(weights)
+        pred_y = self.birch_model.predict(weights)
 
         return pred_y
 
