@@ -11,7 +11,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
-# from Models.model import Model
+from Models.model import Model
 import gensim
 from gensim import corpora
 from gensim.models.coherencemodel import CoherenceModel
