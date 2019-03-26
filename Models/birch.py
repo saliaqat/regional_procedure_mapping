@@ -24,7 +24,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 import warnings
 
 warnings.filterwarnings("ignore")
-# en_stop = set(nltk.corpus.stopwords.words('english'))
+en_stop = set(nltk.corpus.stopwords.words('english'))
 from sklearn.cluster import SpectralClustering
 from sklearn.metrics import davies_bouldin_score
 from sklearn.cluster import Birch

@@ -17,14 +17,14 @@ from gensim import corpora
 from gensim.models.coherencemodel import CoherenceModel
 import pickle
 import seaborn as sns
-# from data_manipulator import *
+from data_manipulator import *
 from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import homogeneity_score
 from sklearn.metrics.pairwise import euclidean_distances
 import warnings
 
 warnings.filterwarnings("ignore")
-# en_stop = set(nltk.corpus.stopwords.words('english'))
+en_stop = set(nltk.corpus.stopwords.words('english'))
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import davies_bouldin_score
 
