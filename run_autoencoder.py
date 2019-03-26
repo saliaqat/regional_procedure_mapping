@@ -160,18 +160,18 @@ def get_encoder(train_x, test_x, dim):
     other_layer_size = int(encoding_dim + (1 * ((vocab_size - encoding_dim) /8)))
 
     # "encoded" is the encoded representation of the input
-    x = Dense(other_layer_size, activation='relu', name='enc_dense_1')(input_sequence)
+    # x = Dense(other_layer_size, activation='relu', name='enc_dense_1')(input_sequence)
     # x = Dense(layer_one_size, activation='relu', name='enc_dense_1')(input_sequence)
     # x = Dense(layer_two_size, activation='relu', name='enc_dense_2')(x)
 
-    encoded = Dense(encoding_dim, activation='relu', name='encoded')(x)
+    encoded = Dense(encoding_dim, activation='relu', name='encoded')(input_sequence)
 
-    y = Dense(other_layer_size, activation='relu', name='dec_dense_1')(encoded)
+    # y = Dense(other_layer_size, activation='relu', name='dec_dense_1')(encoded)
     # y = Dense(layer_two_size, activation='relu', name='dec_dense_1')(encoded)
     # y = Dense(layer_one_size, activation='relu', name='dec_dense_2')(y)
 
     # "decoded" is the lossy reconstruction of the input
-    decoded = Dense(vocab_size, activation='sigmoid', name='output')(y)
+    decoded = Dense(vocab_size, activation='sigmoid', name='output')(encoded)
 
     # this model maps an input to its reconstruction
     autoencoder = Model(inputs=input_sequence, outputs=decoded)
