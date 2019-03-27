@@ -31,7 +31,7 @@ from sklearn.metrics import davies_bouldin_score
 
 class Hierarchial(Model):
     def __init__(self, num_clusters, feature_names, train_x, train_y):
-        self.hierarchial_model = AgglomerativeClustering(n_clusters=num_clusters).fit(train_x.toarray())
+        self.hierarchial_model = AgglomerativeClustering(n_clusters=num_clusters).fit(train_x)
         self.feature_names = feature_names
         self.train_x = train_x
         self.train_y = train_y
@@ -89,7 +89,7 @@ class Hierarchial(Model):
 
     def eval(self):
         self.sil_score = metrics.silhouette_score(self.train_x, self.labels, metric='euclidean')
-        self.db_idx_score = metrics.davies_bouldin_score(self.train_x.toarray(), self.labels)
+        self.db_idx_score = metrics.davies_bouldin_score(self.train_x, self.labels)
         #         print(self.sil_score)
         #         print(self.db_idx_score)
 
@@ -111,10 +111,10 @@ class Hierarchial(Model):
     # cluster: (onwgid1: 1, onwgid2)
 
     def get_sil_score(self):
-        return metrics.silhouette_score(self.train_x.toarray(), self.labels)
+        return metrics.silhouette_score(self.train_x, self.labels)
 
     def get_db_idx_score(self):
-        return davies_bouldin_score(self.train_x.toarray(), self.labels)
+        return davies_bouldin_score(self.train_x, self.labels)
 
     def get_labels(self):
         return self.labels

@@ -113,10 +113,10 @@ class Birch_(Model):
 
     def get_sil_score(self):
         #         print(self.train_x)
-        return metrics.silhouette_score(self.train_x.toarray(), self.labels)
+        return metrics.silhouette_score(self.train_x, self.labels)
 
     def get_db_idx_score(self):
-        return davies_bouldin_score(self.train_x.toarray(), self.labels)
+        return davies_bouldin_score(self.train_x, self.labels)
 
     def get_labels(self):
         return self.labels

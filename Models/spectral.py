@@ -91,7 +91,7 @@ class Spectral(Model):
 
     def eval(self):
         self.sil_score = metrics.silhouette_score(self.train_x, self.labels, metric='euclidean')
-        self.db_idx_score = metrics.davies_bouldin_score(self.train_x.toarray(), self.labels)
+        self.db_idx_score = metrics.davies_bouldin_score(self.train_x, self.labels)
         #         print(self.sil_score)
         #         print(self.db_idx_score)
 
@@ -114,10 +114,10 @@ class Spectral(Model):
 
     def get_sil_score(self):
         #         print(self.train_x)
-        return metrics.silhouette_score(self.train_x.toarray(), self.labels)
+        return metrics.silhouette_score(self.train_x, self.labels)
 
     def get_db_idx_score(self):
-        return davies_bouldin_score(self.train_x.toarray(), self.labels)
+        return davies_bouldin_score(self.train_x, self.labels)
 
     def get_labels(self):
         return self.labels

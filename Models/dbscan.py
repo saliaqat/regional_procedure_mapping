@@ -31,7 +31,7 @@ from sklearn.metrics import davies_bouldin_score
 
 class DBscan(Model):
     def __init__(self, min_samples, feature_names, train_x, train_y):
-        self.dbscan_model = DBSCAN(eps=3, min_samples=2).fit(train_x.toarray())
+        self.dbscan_model = DBSCAN(eps=3, min_samples=2).fit(train_x)
         self.feature_names = feature_names
         self.train_x = train_x
         self.train_y = train_y
@@ -90,7 +90,7 @@ class DBscan(Model):
 
     def eval(self):
         self.sil_score = metrics.silhouette_score(self.train_x, self.labels, metric='euclidean')
-        self.db_idx_score = metrics.davies_bouldin_score(self.train_x.toarray(), self.labels)
+        self.db_idx_score = metrics.davies_bouldin_score(self.train_x, self.labels)
         # evaluate with ON WG IDENTIFIER
         self.custom_score()
 
@@ -103,10 +103,10 @@ class DBscan(Model):
         print(len(unique_cids))
 
     def get_sil_score(self):
-        return metrics.silhouette_score(self.train_x.toarray(), self.labels)
+        return metrics.silhouette_score(self.train_x, self.labels)
 
     def get_db_idx_score(self):
-        return davies_bouldin_score(self.train_x.toarray(), self.labels)
+        return davies_bouldin_score(self.train_x, self.labels)
 
     def get_labels(self):
         return self.labels
