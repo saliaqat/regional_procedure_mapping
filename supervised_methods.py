@@ -64,6 +64,52 @@ def main():
 
 def supervised_scratch():
     from Models.logistic_regression import MultiClassLogisticRegression
+    from Models.random_forest import RandomForest
+    from Models.naive_bayes import NaiveBayes
+    from Models.svm import SVM
+
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+
+    train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
+    train_x, train_y, val_x, val_y, test_x, test_y = bag_of_words_full_no_empty_val_no_num_no_short_no_repeat(
+        train_x_raw, train_y_raw,
+        val_x_raw, val_y_raw, test_x_raw,
+        test_y_raw)
+
+    encoder = get_encoder(train_x, test_x, 4096)
+    encoded_train = encoder.predict(train_x)
+    encoded_test = encoder.predict(test_x)
+    encoded_val = encoder.predict(val_x)
+
+    print('neural net ae')
+    model = _get_nn_model_bag_of_words_simple_scratch(encoded_train, train_y, encoded_val, val_y,
+                                                      data_reader.get_region_labels()['Code'], epochs=100,
+                                                      batch_size=256)
+    evaluate_model_nn(model, encoded_test, test_y, plot_roc=False)
+
+    print('logistic regression ae')
+    model = MultiClassLogisticRegression()
+    model.train(encoded_train, train_y)
+    evaluate_model(model, encoded_test, test_y, plot_roc=False)
+
+    print('random forest ae')
+    model = RandomForest()
+    model.train(encoded_train, train_y)
+    evaluate_model(model, encoded_test, test_y, plot_roc=False)
+
+    print('naive bayes ae')
+    model = NaiveBayes()
+    model.train(encoded_train, train_y)
+    evaluate_model(model, encoded_test, test_y, plot_roc=False)
+
+    print('svm ae')
+    model = SVM()
+    model.train(encoded_train, train_y)
+    evaluate_model(model, encoded_test, test_y, plot_roc=False)
+
+def run_all_models():
+    from Models.logistic_regression import MultiClassLogisticRegression
     from Models.naive_bayes import NaiveBayes
     from Models.naive_bayes import MultinomialNaiveBayes
     from Models.random_forest import RandomForest

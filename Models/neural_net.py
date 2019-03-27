@@ -166,6 +166,7 @@ class MultiClassNNScratch(NeuralNet):
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)
+        self.model.summary
         self.model.compile(optimizer="adam", loss='categorical_crossentropy', metrics=["acc", top_3_accuracy, top_k_categorical_accuracy])
         self.name = 'multiclassNNScratch'
 
