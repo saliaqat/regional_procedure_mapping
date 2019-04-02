@@ -29,6 +29,8 @@ from Models.spectral import Spectral
 from Models.affinity import Affinity
 from run_autoencoder import get_encoder
 
+from sklearn.manifold import TSNE
+
 import argparse
 
 def plot_dataset_size_per_site(dataset_sizes, x_labels):
@@ -55,11 +57,15 @@ def main():
     parser = argparse.ArgumentParser(description='Run unsupervised methods', add_help=False)
     parser.add_argument("-h", "--help",  action="store_true", dest="help")
     parser.add_argument("-m", "--model", action="store", required=True, dest="MODELS", nargs='+', choices=['all', 'kmeans', 'lda', 'dbscan', 'birch', 'hierarchical', 'gmm', 'meanshift', 'spectral', 'affinity'], help="Run model")
-    parser.add_argument("-r", "--rep",   action="store", required=False, dest="REP", choices=['bow', 'tfidf'], help="Use bag of words representation (BOW), or tfidf representation")
+    parser.add_argument("-r", "--rep",   action="store", required=False, dest="REP", choices=['bow', 'tfidf', 'doc2vec'], help="Use bag of words representation (BOW), tfidf, or doc2vec representation")
     parser.add_argument("--use-autoencoder", action="store_true", dest="USE_AUTOENCODER", help="Use autoencoders to reduce representations")
+    #parser.add_argument("--use-doc2vec", action="store_true", dest="USE_DOC2VEC", help="Use doc2vec representations")
     parser.add_argument("-s", "--sample-size", action="store", required=False, dest="SIZE", help="Use smaller set")
+    parser.add_argument("--min-cluster-size", action="store", required=False, default=5, dest="MIN_CLUSTER_SIZE", help="Filter out any ON WG IDENTIFIER classes with less than MIN_CLUSTER_SIZE")
+    parser.add_argument("-n", "--num-clusters", action="store", required=False, default=1500, dest="NUM_CLUSTERS", help="Number of clusters for algorithms that require it")
     args = parser.parse_args()
-    print(args.MODELS)
+    #print(args.MODELS)
+
 	# get data
     data_reader = DataReader()
     df = data_reader.get_all_data()
@@ -73,7 +79,8 @@ def main():
     test_x_raw.drop(['RIS PROCEDURE CODE'], axis=1, inplace=True)
 
     # identify ON WG IDENTIFIERS that occur infrequently
-    min_samples = 20
+    #print("MIN_CLUSTER_SIZE: " + str(args.MIN_CLUSTER_SIZE))
+    min_samples = args.MIN_CLUSTER_SIZE
     train_y_list = train_y_raw['ON WG IDENTIFIER'].values.tolist()
     unique_ids = list(set(train_y_list))
     small_clusters = list()
@@ -82,15 +89,17 @@ def main():
             small_clusters.append(i)
     train_x_raw = train_x_raw[~train_y_raw['ON WG IDENTIFIER'].isin(small_clusters)]
     train_y_raw = train_y_raw[~train_y_raw['ON WG IDENTIFIER'].isin(small_clusters)]
+    #print(train_y_raw['ON WG IDENTIFIER'])
+    #print(len(unique_ids))
     num_clusters = len(unique_ids) - len(small_clusters)
-    print(train_x_raw.shape)
-    print("num_clusters: " + str(num_clusters))
+    #print("NUM_CLUSTERS: " + str(num_clusters))
+
     # tokenize and subsample
     tokens_train, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, regex_string=r'[a-zA-Z0-9]+', 
         save_missing_feature_as_string=False, remove_short=True, remove_num=True, remove_empty=True)
     tokens_test, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, regex_string=r'[a-zA-Z0-9]+', 
         save_missing_feature_as_string=False, remove_short=True, remove_num=True, remove_empty=True)
-    print("done tokenizing columns")
+    #print("done tokenizing columns")
 
     # get representation of data
     feature_names = list()
@@ -98,30 +107,38 @@ def main():
     train_y = list()
     test_x = list()
     test_y = list()
-    if args.REP == "bow":
+    if args.REP == "bow" or args.USE_AUTOENCODER:
         train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, CountVectorizer)
         test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, CountVectorizer, feature_names=feature_names)
-        print("done converting to bag of words representation")
+        #print("done converting to bag of words representation")
     elif args.REP == "tfidf":
         train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, TfidfVectorizer)
         test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, TfidfVectorizer, feature_names=feature_names)
-        print("done converting to tfidf representation")
+        #print("done converting to tfidf representation")
+    elif args.REP == "doc2vec":
+        train_x, train_y, _ = tokens_to_doc2vec(tokens_train, train_y_raw)
+        test_x, train_y, _ = tokens_to_doc2vec(tokens_test, train_y_raw)
+        #print("done converting to doc2vec representation")
     
+    VOCAB_SIZE = train_x.shape[1]
     if args.USE_AUTOENCODER:
-        encoder = get_encoder(train_x, test_x, int(len(data_reader.get_region_labels()['Code'])))
+        #print(int(len(data_reader.get_region_labels()['Code'])))
+        # use an autoencoder with representation size = VOCAB_SIZE / 10
+        REP_SIZE = 100
+        encoder = get_encoder(train_x, test_x, REP_SIZE)
         train_x = encoder.predict(train_x)
         test_x = encoder.predict(test_x)
-    else:
-        train_x = train_x.toarray()
-        test_x = test_x.toarray()
+        #print("done converting to autoencoder representation")
+    #else:
+    #    train_x = train_x.toarray()
+    #    test_x = test_x.toarray()
 
     # run models
+    print("VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS: " + str(num_clusters) + ", MIN_CLUSTER_SIZE: " + str(args.MIN_CLUSTER_SIZE))
     if "kmeans" in args.MODELS or "all" in args.MODELS:
         kmeans = Kmeans(num_clusters, feature_names, train_x, train_y)
         kmeans.eval()
-        print("kmeans " + args.REP + " results:")
-        print("sil score:" + str(kmeans.get_sil_score()))
-        print("db idx:" + str(kmeans.get_db_idx_score()))
+        print("kmeans, " + args.REP + ", " + str(kmeans.get_sil_score()) + ", " + str(kmeans.get_db_idx_score()))
         #print("getting nearest: ")
         #kmeans.get_nearest_neighbours("Y DIR - ANGIOGRAM")
         #kmeans.get_nearest_neighbours("US KNEE BIOPSY/ASPIRATION")
@@ -133,41 +150,32 @@ def main():
         print("finished running lda")
     if "dbscan" in args.MODELS or "all" in args.MODELS:
         # run dbscan
-        dbscan = DBscan(num_clusters, feature_names, train_x, train_y)
-        dbscan.eval()
-        print("dbscan " + args.REP + " results:")
-        print("sil score:" + str(dbscan.get_sil_score()))
-        print("db idx:" + str(dbscan.get_db_idx_score()))
+        dbs = DBscan(num_clusters, feature_names, train_x, train_y)
+        dbs.eval()
+        print("dbscan, " + args.REP + ", " + str(dbs.get_sil_score()) + ", " + str(dbs.get_db_idx_score()))
     if "birch" in args.MODELS or "all" in args.MODELS:
         b = Birch_(num_clusters, feature_names, train_x, train_y)
-        print("birch "  + args.REP + " results:")
-        print('sil score: ' + str(b.get_sil_score())) 
-        print('db idx: ' + str(b.get_db_idx_score()))
+        print("GMM, " + args.REP + ", " + str(b.get_sil_score()) + ", " + str(b.get_db_idx_score()))
     if "hierarchical" in args.MODELS or "all" in args.MODELS:
         h = Hierarchial(num_clusters, feature_names, train_x, train_y)
-        print("hierarchical "  + args.REP + " results:")
-        print('sil score: ' + str(h.get_sil_score())) 
-        print('db idx: ' + str(h.get_db_idx_score()))
+        print("hierarchical, " + args.REP + ", " + str(h.get_sil_score()) + ", " + str(h.get_db_idx_score()))
+        plt.figure(figsize=(10, 7)) 
+        tsne = TSNE(n_components=2, verbose=1)
+        tsne_results = tsne.fit_transform(h.get_labels())
+        plt.scatter(train_x[:,0], train_x[:,1], c=h.get_labels(), cmap='rainbow')
+        plt.savefig('hierarchical_results.png')  
     if "gmm" in args.MODELS or "all" in args.MODELS:
         gmm = GMM(num_clusters, feature_names, train_x, train_y)
-        print("GMM " + args.REP + " results:")
-        print('sil score: ' + str(gmm.get_sil_score())) 
-        print('db idx: ' + str(gmm.get_db_idx_score()))
+        print("GMM, " + args.REP + ", " + str(gmm.get_sil_score()) + ", " + str(gmm.get_db_idx_score())) 
     if "meanshift" in args.MODELS or "all" in args.MODELS:
         ms = Meanshift(feature_names, train_x, train_y)
-        print("meanshift " + args.REP + " results:")
-        print('sil score: ' + str(ms.get_sil_score())) 
-        print('db idx: ' + str(ms.get_db_idx_score()))
+        print("meanshift, " + args.REP + ", " + str(ms.get_sil_score()) + ", " + str(ms.get_db_idx_score()))
     if "spectral" in args.MODELS or "all" in args.MODELS:
         sp = Spectral(num_clusters, feature_names, train_x, train_y)
-        print("Spectral " + args.REP + " results:")
-        print('sil score: ' + str(sp.get_sil_score()))
-        print('db idx: ' + str(sp.get_db_idx_score()))
+        print("spectral, " + args.REP + ", " + str(sp.get_sil_score()) + ", " + str(sp.get_db_idx_score()))
     if "affinity" in args.MODELS or "all" in args.MODELS:
-        sp = Affinity(num_clusters, feature_names, train_x, train_y)
-        print("Affinity " + args.REP + " results:")
-        print('sil score: ' + str(sp.get_sil_score()))
-        print('db idx: ' + str(sp.get_db_idx_score()))
+        af = Affinity(num_clusters, feature_names, train_x, train_y)
+        print("affinity, " + args.REP + ", " + str(af.get_sil_score()) + ", " + str(af.get_db_idx_score()))
 
 if __name__ == '__main__':
     main()

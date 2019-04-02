@@ -94,8 +94,8 @@ class Kmeans(Model):
     def eval(self):
         self.sil_score = metrics.silhouette_score(self.train_x, self.labels, metric='euclidean')
         self.db_idx_score = metrics.davies_bouldin_score(self.train_x, self.labels)
-        print(self.sil_score)
-        print(self.db_idx_score)
+        #print(self.sil_score)
+        #print(self.db_idx_score)
 
         # evaluate with ON WG IDENTIFIER
         self.custom_score()
@@ -109,7 +109,7 @@ class Kmeans(Model):
         print(len(unique_cids))
 
         # for each cluster
-        scores = list() 
+        '''scores = list() 
         for i in set(self.labels.tolist()):
             print("cluster: " + str(i))
 
@@ -131,7 +131,7 @@ class Kmeans(Model):
             print(score)
             scores.append(score)
             print("-------------------")
-        self.plot_custom_score(scores)
+        self.plot_custom_score(scores)'''
 
     def plot_custom_score(self, scores):
         # the histogram of the data
