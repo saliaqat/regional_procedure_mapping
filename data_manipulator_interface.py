@@ -39,7 +39,7 @@ def bag_of_words_full(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
 
     return train_x, train_y, test_x, test_y
 
-@Cachable("full_bag_of_words_no_empty.pkl", version=1)
+# @Cachable("full_bag_of_words_no_empty.pkl", version=1)
 def bag_of_words_full_no_empty(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
     tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True)
     train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
@@ -49,7 +49,7 @@ def bag_of_words_full_no_empty(train_x_raw, train_y_raw, test_x_raw, test_y_raw)
 
     return train_x, train_y, test_x, test_y
 
-@Cachable("full_bag_of_words_no_empty_val.pkl", version=3)
+@Cachable("full_bag_of_words_no_empty_val.pkl", version=4)
 def bag_of_words_full_no_empty_val(train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw):
     tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True)
     train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw)
@@ -60,7 +60,7 @@ def bag_of_words_full_no_empty_val(train_x_raw, train_y_raw, val_x_raw, val_y_ra
     tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_empty=True)
     test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names)
 
-    return train_x, train_y, val_x, val_y, test_x, test_y
+    return train_x, train_y, val_x, val_y, test_x, test_y, feature_names
 
 @Cachable("full_bag_of_words_no_empty_val_no_num.pkl", version=3)
 def bag_of_words_full_no_empty_val_no_num(train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw):
