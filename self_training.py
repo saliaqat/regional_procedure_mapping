@@ -40,7 +40,7 @@ def main():
     semi_x_base, _, _ = tokens_to_bagofwords(tokens, _, feature_names=feature_names)
 
     # Confidence threshold to train on
-    train_threshold = 0.9
+    train_threshold = 0.8
     semi_train_amount = 30
 
     # SELF TRAIN MANY TIMES

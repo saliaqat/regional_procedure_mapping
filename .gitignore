@@ -8,3 +8,5 @@ Models/*.pyc
 *.png
 tsne_plot_history.txt
 tmp.csv
+cache/
+*.h5
