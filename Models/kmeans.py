@@ -20,17 +20,20 @@ from data_manipulator import *
 from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import homogeneity_score
 from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 import math
 import warnings
 warnings.filterwarnings("ignore")
 en_stop = set(nltk.corpus.stopwords.words('english'))
 
 class Kmeans(Model):
-    def __init__(self, num_clusters, feature_names, train_x, train_y):
+    def __init__(self, num_clusters, feature_names, train_x, train_y, vectorizer=CountVectorizer):
         self.kmeans_model = KMeans(n_clusters=num_clusters, random_state=0).fit(train_x)
         self.feature_names = feature_names
         self.train_x = train_x
         self.train_y = train_y
+        self.vectorizer = vectorizer
         self.labels = self.kmeans_model.labels_
         self.num_clusters = num_clusters
         self.sil_score = -100.0
@@ -50,7 +53,7 @@ class Kmeans(Model):
         tokens = self._tokenize(query)
         
         # get representation (bag of words)
-        weights, y, _ = tokens_to_bagofwords([tokens, ], 1, CountVectorizer, self.feature_names)
+        weights, y, _ = tokens_to_bagofwords([tokens, ], 1, self.vectorizer, self.feature_names)
         pred_y = self.kmeans_model.predict(weights)
         
         return pred_y
@@ -62,12 +65,13 @@ class Kmeans(Model):
 
         # tokenize data and get bag of words
         tokens = self._tokenize(query)
-        weights, y, _ = tokens_to_bagofwords([tokens, ], 1, CountVectorizer, self.feature_names)
+        weights, y, _ = tokens_to_bagofwords([tokens, ], 1, self.vectorizer, self.feature_names)
         #print(weights)
 
         # get all training values in same cluster
         train_x_idx = np.where(self.labels == pred_y)
         cluster_set = self.train_x[np.where(self.labels == pred_y)]
+        cluster_set_y = self.train_y.iloc[train_x_idx[0]].as_matrix()
         print("Clustered with: " + str(cluster_set.shape[0]))
 
         # get distances between query and all in same cluster
@@ -76,6 +80,7 @@ class Kmeans(Model):
         # sort by distance
         sorted_dist = [d for d,x in sorted(zip(distances,cluster_set), key=lambda x: x[0])]
         sorted_by_dist = [x for d,x in sorted(zip(distances,cluster_set), key=lambda x: x[0])]
+        sorted_y_by_dist = [x for d,x in sorted(zip(distances,cluster_set_y), key=lambda x: x[0])]
 
         # print top 20% closest neighbours
         num_in_cluster = float(cluster_set.shape[0])
@@ -89,16 +94,18 @@ class Kmeans(Model):
             for x in np.where(cluster_set[i].toarray() != 0)[1]:
                 entry.append(self.feature_names[x])
             neighbours.append(entry)
-            print(entry) 
+            #print(entry) 
+            print(cluster_set_y[i])
 
     def eval(self):
-        self.sil_score = metrics.silhouette_score(self.train_x, self.labels, metric='euclidean')
-        self.db_idx_score = metrics.davies_bouldin_score(self.train_x, self.labels)
+        self.sil_score = metrics.silhouette_score(self.train_x.toarray(), self.labels, metric='euclidean')
+        self.db_idx_score = metrics.davies_bouldin_score(self.train_x.toarray(), self.labels)
+
         #print(self.sil_score)
         #print(self.db_idx_score)
 
         # evaluate with ON WG IDENTIFIER
-        self.custom_score()
+        #self.custom_score()
 
     def custom_score(self):
         # evaluate with ON WG IDENTIFIER

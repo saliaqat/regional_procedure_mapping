@@ -11,6 +11,8 @@ import pandas as pd
 from data_reader import DataReader
 from data_manipulator import *
 from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 import keras
 import gzip
 import nltk
@@ -71,6 +73,7 @@ def main():
     df = data_reader.get_all_data()
     if args.SIZE:
         train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df[:int(args.SIZE)])
+        print(train_x_raw[:5])
     else:
         train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
     #train_x_raw = pd.concat([train_x_raw, test_x_raw], axis=0)
@@ -94,6 +97,10 @@ def main():
     num_clusters = len(unique_ids) - len(small_clusters)
     #print("NUM_CLUSTERS: " + str(num_clusters))
 
+    # set labels to original documents to map back in future
+    train_y_raw = train_x_raw
+    test_y_raw = test_x_raw
+
     # tokenize and subsample
     tokens_train, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, regex_string=r'[a-zA-Z0-9]+', 
         save_missing_feature_as_string=False, remove_short=True, remove_num=True, remove_empty=True)
@@ -107,9 +114,11 @@ def main():
     train_y = list()
     test_x = list()
     test_y = list()
+    print(test_x_raw.shape)
     if args.REP == "bow" or args.USE_AUTOENCODER:
         train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, CountVectorizer)
         test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, CountVectorizer, feature_names=feature_names)
+        print(test_x.shape)
         #print("done converting to bag of words representation")
     elif args.REP == "tfidf":
         train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, TfidfVectorizer)
@@ -136,13 +145,16 @@ def main():
     # run models
     print("VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS: " + str(num_clusters) + ", MIN_CLUSTER_SIZE: " + str(args.MIN_CLUSTER_SIZE))
     if "kmeans" in args.MODELS or "all" in args.MODELS:
-        kmeans = Kmeans(num_clusters, feature_names, train_x, train_y)
+        if args.REP == "tfidf":
+            kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, TfidfVectorizer)
+        else:
+            kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, CountVectorizer)
         kmeans.eval()
         print("kmeans, " + args.REP + ", " + str(kmeans.get_sil_score()) + ", " + str(kmeans.get_db_idx_score()))
-        #print("getting nearest: ")
-        #kmeans.get_nearest_neighbours("Y DIR - ANGIOGRAM")
-        #kmeans.get_nearest_neighbours("US KNEE BIOPSY/ASPIRATION")
-        #kmeans.get_nearest_neighbours("G TUBE INSERTION")
+        print("getting nearest: ")
+        kmeans.get_nearest_neighbours("Y DIR - ANGIOGRAM")
+        kmeans.get_nearest_neighbours("US KNEE BIOPSY/ASPIRATION")
+        kmeans.get_nearest_neighbours("G TUBE INSERTION")
     if "lda" in args.MODELS or "all" in args.MODELS:
         # run lda
         lda = Lda(train_x_raw, train_y_raw, 1500, passes=15)
