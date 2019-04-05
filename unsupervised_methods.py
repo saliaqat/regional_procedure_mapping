@@ -10,6 +10,7 @@ from sklearn import metrics
 import pandas as pd
 from data_reader import DataReader
 from data_manipulator import *
+from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
@@ -64,10 +65,13 @@ def main():
     parser.add_argument("--use-autoencoder", action="store_true", dest="USE_AUTOENCODER", help="Use autoencoders to reduce representations")
     #parser.add_argument("--use-doc2vec", action="store_true", dest="USE_DOC2VEC", help="Use doc2vec representations")
     parser.add_argument("-s", "--sample-size", action="store", required=False, dest="SIZE", help="Use smaller set")
+    parser.add_argument("-d", "--downsample-frac", action="store", required=False, dest="DOWNSAMPLE_FRAC", type=float, help="downsample fraction (0-1]")
     parser.add_argument("--min-cluster-size", action="store", required=False, default=5, dest="MIN_CLUSTER_SIZE", help="Filter out any ON WG IDENTIFIER classes with less than MIN_CLUSTER_SIZE")
     parser.add_argument("-n", "--num-clusters", action="store", required=False, default=1500, dest="NUM_CLUSTERS", help="Number of clusters for algorithms that require it")
     args = parser.parse_args()
     #print(args.MODELS)
+
+    assert(not (args.DOWNSAMPLE_FRAC) or (args.DOWNSAMPLE_FRAC > 0.0 and args.DOWNSAMPLE_FRAC < 1.0 and args.DOWNSAMPLE_FRAC))
 
 	# get data
     data_reader = DataReader()
@@ -75,7 +79,9 @@ def main():
     if args.SIZE:
         subset_df = df.sample(n=int(args.SIZE))
         train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(subset_df)
-        print(train_x_raw[:5])
+    elif args.DOWNSAMPLE_FRAC:
+        subset_df = df.sample(frac=float(args.DOWNSAMPLE_FRAC))
+        train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(subset_df)
     else:
         train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
     #train_x_raw = pd.concat([train_x_raw, test_x_raw], axis=0)
@@ -99,9 +105,9 @@ def main():
     num_clusters = len(unique_ids) - len(small_clusters)
     #print("NUM_CLUSTERS: " + str(num_clusters))
 
-    # set labels to original documents to map back in future
-    train_y_raw = train_x_raw
-    test_y_raw = test_x_raw
+    # append the ON WG IDENTIFIERS to the original documents
+    train_y_raw = pd.concat([train_x_raw, train_y_raw], axis=1)
+    test_y_raw = pd.concat([test_x_raw, test_y_raw], axis=1)
 
     # tokenize and subsample
     tokens_train, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, regex_string=r'[a-zA-Z0-9]+', 
@@ -145,7 +151,7 @@ def main():
     #    test_x = test_x.toarray()
 
     # run models
-    print("VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS: " + str(num_clusters) + ", MIN_CLUSTER_SIZE: " + str(args.MIN_CLUSTER_SIZE))
+    print("VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS = " + str(num_clusters) + ", MIN_CLUSTER_SIZE = " + str(args.MIN_CLUSTER_SIZE))
     if "kmeans" in args.MODELS or "all" in args.MODELS:
         if args.REP == "tfidf":
             kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, TfidfVectorizer)
@@ -157,6 +163,31 @@ def main():
         kmeans.get_nearest_neighbours("Y DIR - ANGIOGRAM")
         kmeans.get_nearest_neighbours("US KNEE BIOPSY/ASPIRATION")
         kmeans.get_nearest_neighbours("G TUBE INSERTION")
+
+        plt.figure(figsize=(10, 7)) 
+        fig, ax = plt.subplots()
+        #reduced_data = PCA(n_components=2).fit_transform(train_x.todense())
+        labels = kmeans.get_labels()
+        print(labels)
+        print("number of unique labels: " + str(len(np.unique(labels))))
+        #plt.scatter(reduced_data[:,0], reduced_data[:,1], cmap='rainbow', c=labels)
+
+        # plot 500 random clusters
+        num_clusters_to_plot = 500
+        tsne = TSNE(n_components=2, verbose=1)
+        random_clusters = random.sample(range(1, num_clusters), num_clusters_to_plot)
+        reduced_data = tsne.fit_transform(train_x.todense())
+        cmap = plt.cm.get_cmap('rainbow',num_clusters_to_plot)
+
+        for i in range(num_clusters_to_plot):
+            l = random_clusters[i]
+            print("cluster " + str(l))
+            indices = np.where(labels == l)
+            col = cmap(i)
+            cluster_reduced_data = reduced_data[indices[0]]
+            print(cluster_reduced_data.shape)
+            plt.scatter(cluster_reduced_data[:,0], cluster_reduced_data[:,1], color=col)
+        plt.savefig('kmeans_' +  args.REP + '.tsne.png')  
     if "lda" in args.MODELS or "all" in args.MODELS:
         # run lda
         lda = Lda(train_x_raw, train_y_raw, 1500, passes=15)
