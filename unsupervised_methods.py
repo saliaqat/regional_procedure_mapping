@@ -13,6 +13,7 @@ from data_manipulator import *
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
+import random
 import keras
 import gzip
 import nltk
@@ -72,7 +73,8 @@ def main():
     data_reader = DataReader()
     df = data_reader.get_all_data()
     if args.SIZE:
-        train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df[:int(args.SIZE)])
+        subset_df = df.sample(n=int(args.SIZE))
+        train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(subset_df)
         print(train_x_raw[:5])
     else:
         train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
