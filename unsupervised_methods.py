@@ -14,6 +14,7 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import PCA
 import random
 import keras
 import gzip
@@ -68,7 +69,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run unsupervised methods', add_help=False)
     parser.add_argument("-h", "--help",  action="store_true", dest="help")
     parser.add_argument("-m", "--model", action="store", required=True, dest="MODELS", nargs='+', choices=['all', 'kmeans', 'lda', 'dbscan', 'birch', 'hierarchical', 'gmm', 'meanshift', 'spectral', 'affinity'], help="Run model")
-    parser.add_argument("-r", "--rep",   action="store", required=False, dest="REP", choices=['bow', 'tfidf', 'doc2vec'], help="Use bag of words representation (BOW), tfidf, or doc2vec representation")
+    parser.add_argument("-r", "--rep",   action="store", required=False, dest="REP", choices=['bow', 'tfidf', 'doc2vec', 'pca'], help="Use bag of words representation (BOW), tfidf, doc2vec representation, or PCA")
     parser.add_argument("--use-autoencoder", action="store_true", dest="USE_AUTOENCODER", help="Use autoencoders to reduce representations")
     #parser.add_argument("--use-doc2vec", action="store_true", dest="USE_DOC2VEC", help="Use doc2vec representations")
     parser.add_argument("-s", "--sample-size", action="store", required=False, dest="SIZE", help="Use smaller set")
@@ -143,6 +144,22 @@ def main():
         train_x, train_y, _ = tokens_to_doc2vec(tokens_train, train_y_raw)
         test_x, train_y, _ = tokens_to_doc2vec(tokens_test, train_y_raw)
         #print("done converting to doc2vec representation")
+    elif args.REP == "pca":
+        train_x, train_y, feature_names = token_to_bagofwords(tokens_train, train_y_raw, CountVectorizer)
+        test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, CountVectorizer, feature_names=feature_names)
+
+        #get number of components
+        pca = PCA()
+        pca.fit(train_x.toarray())
+        var = np.cumsum(pca.explained_variance_ratio_)
+        n_comp = np.argmax(var > .9) + 1
+        # fit pca
+        pca = PCA(n_components=n_comp)
+        pca.fit(train_x.toarray())
+        train_x = pca.fit_transform(train_x)
+        test_x = pca.fit_transform(test_x)
+
+
     
     VOCAB_SIZE = train_x.shape[1]
     if args.USE_AUTOENCODER:
