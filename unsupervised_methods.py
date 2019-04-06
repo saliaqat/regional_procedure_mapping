@@ -156,8 +156,8 @@ def main():
         # fit pca
         pca = PCA(n_components=n_comp)
         pca.fit(train_x.toarray())
-        train_x = pca.fit_transform(train_x)
-        test_x = pca.fit_transform(test_x)
+        train_x = pca.fit_transform(train_x.toarray())
+        test_x = pca.fit_transform(test_x.toarray())
 
 
     
