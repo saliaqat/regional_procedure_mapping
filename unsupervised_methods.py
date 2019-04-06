@@ -55,6 +55,13 @@ def plot_sil_scores_per_site(scores, x_labels):
     plt.title('Silhouette Scores for Clustering by Site')
     plt.savefig("sil_scores_per_site.pdf", bbox_inches = "tight")
 
+def get_top_keywords(data, clusters, labels, n_terms):
+    df = pd.DataFrame(data.todense()).groupby(clusters).mean()
+    
+    for i,r in df.iterrows():
+        print('\nCluster {}'.format(i))
+        print(','.join([labels[t] for t in np.argsort(r)[-n_terms:]]))
+    
 
 def main():
     # parse arguments
@@ -158,22 +165,26 @@ def main():
         else:
             kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, CountVectorizer)
         kmeans.eval()
+        labels = kmeans.get_labels()
+
+        # print results
         print("kmeans, " + args.REP + ", " + str(kmeans.get_sil_score()) + ", " + str(kmeans.get_db_idx_score()))
+ 
+        # example queries
         print("getting nearest: ")
         kmeans.get_nearest_neighbours("Y DIR - ANGIOGRAM")
         kmeans.get_nearest_neighbours("US KNEE BIOPSY/ASPIRATION")
         kmeans.get_nearest_neighbours("G TUBE INSERTION")
 
-        plt.figure(figsize=(10, 7)) 
-        fig, ax = plt.subplots()
-        #reduced_data = PCA(n_components=2).fit_transform(train_x.todense())
-        labels = kmeans.get_labels()
-        print(labels)
-        print("number of unique labels: " + str(len(np.unique(labels))))
-        #plt.scatter(reduced_data[:,0], reduced_data[:,1], cmap='rainbow', c=labels)
+        # get top keywords for clusters
+        print("get top keywords for cluster: ")
+        get_top_keywords(train_x, labels, feature_names, 10)
 
         # plot 500 random clusters
-        num_clusters_to_plot = 500
+        plt.figure(figsize=(10, 7)) 
+        fig, ax = plt.subplots()
+        print("number of unique labels: " + str(len(np.unique(labels))))
+        num_clusters_to_plot = 50
         tsne = TSNE(n_components=2, verbose=1)
         random_clusters = random.sample(range(1, num_clusters), num_clusters_to_plot)
         reduced_data = tsne.fit_transform(train_x.todense())
@@ -187,7 +198,7 @@ def main():
             cluster_reduced_data = reduced_data[indices[0]]
             print(cluster_reduced_data.shape)
             plt.scatter(cluster_reduced_data[:,0], cluster_reduced_data[:,1], color=col)
-        plt.savefig('kmeans_' +  args.REP + '.tsne.png')  
+        plt.savefig('kmeans_' +  args.REP + '_' + str(num_clusters_to_plot) + '.tsne.png')  
     if "lda" in args.MODELS or "all" in args.MODELS:
         # run lda
         lda = Lda(train_x_raw, train_y_raw, 1500, passes=15)
