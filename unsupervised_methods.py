@@ -14,7 +14,6 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import PCA
 import random
 import keras
 import gzip
@@ -27,7 +26,7 @@ from Models.lda import Lda
 from Models.kmeans import Kmeans
 from Models.dbscan import DBscan
 from Models.birch import Birch_
-from Models.hierarchial import Hierarchial
+from Models.hierarchical import Hierarchical
 from Models.gmm import GMM
 from Models.meanshift import Meanshift
 from Models.spectral import Spectral
@@ -56,30 +55,65 @@ def plot_sil_scores_per_site(scores, x_labels):
     plt.title('Silhouette Scores for Clustering by Site')
     plt.savefig("sil_scores_per_site.pdf", bbox_inches = "tight")
 
-def get_top_keywords(data, clusters, labels, n_terms):
-    df = pd.DataFrame(data.todense()).groupby(clusters).mean()
+def get_top_keywords(data, clusters, feature_names, n_terms):
+    # group by clusters and get the mean occurence of each word
+    df = pd.DataFrame(data).groupby(clusters).mean()
     
+    # iterate through each cluster and get the most frequent occuring words
     for i,r in df.iterrows():
-        print('\nCluster {}'.format(i))
-        print(','.join([labels[t] for t in np.argsort(r)[-n_terms:]]))
-    
+        print('Cluster {}: '.format(i) + ','.join([str(feature_names[t]) for t in np.argsort(r)[-n_terms:]]))
+
+def plot_cluster_size_frequency(data, clusters, nc):
+    x = list()
+    for i in range(nc):
+        count = np.count_nonzero(clusters == i)
+        x.append(count)
+    fig = plt.figure()
+    plt.hist(x)
+    plt.title('Frequency of cluster sizes')
+    plt.savefig("kmeans_tfidf_cluster_size_frequency.png")
+
+# code from: https://www.kaggle.com/jbencina/clustering-documents-with-tfidf-and-kmeans
+def find_optimal_clusters(max_k, feature_names, train_x, train_y, rep):
+    iters = [2] + list(range(100, max_k+1, 100))
+    sse = []
+    for k in iters:
+        #kmeans = ""
+        h = ""
+        if rep == "tfidf":
+            h = Hierarchical(k, feature_names, train_x, train_y, rep)
+            #kmeans = Kmeans(k, feature_names, train_x, train_y, TfidfVectorizer)
+        else:
+            h = Hierarchical(k, feature_names, train_x, train_y, rep)
+            #kmeans = Kmeans(k, feature_names, train_x, train_y, CountVectorizer)
+        #sse.append(kmeans.kmeans_model.inertia_)
+        sse.append(h.get_sil_score())
+        print('Fit '+ str(k)  + ' clusters: ' + str(h.get_sil_score()))
+        
+    f, ax = plt.subplots(1, 1)
+    ax.plot(iters, sse, marker='o')
+    ax.set_xlabel('Number of cluster Centers (k)')
+    ax.set_xticks(iters)
+    ax.set_xticklabels(iters)
+    ax.set_ylabel('SSE')
+    ax.set_title('SSE by Cluster Center Plot')
+    plt.savefig('vary_k.png', dpi=1000)
 
 def main():
     # parse arguments
-    parser = argparse.ArgumentParser(description='Run unsupervised methods', add_help=False)
-    parser.add_argument("-h", "--help",  action="store_true", dest="help")
+    parser = argparse.ArgumentParser(description='Run unsupervised methods', add_help=True)
     parser.add_argument("-m", "--model", action="store", required=True, dest="MODELS", nargs='+', choices=['all', 'kmeans', 'lda', 'dbscan', 'birch', 'hierarchical', 'gmm', 'meanshift', 'spectral', 'affinity'], help="Run model")
     parser.add_argument("-r", "--rep",   action="store", required=False, dest="REP", choices=['bow', 'tfidf', 'doc2vec', 'pca'], help="Use bag of words representation (BOW), tfidf, doc2vec representation, or PCA")
     parser.add_argument("--use-autoencoder", action="store_true", dest="USE_AUTOENCODER", help="Use autoencoders to reduce representations")
     #parser.add_argument("--use-doc2vec", action="store_true", dest="USE_DOC2VEC", help="Use doc2vec representations")
     parser.add_argument("-s", "--sample-size", action="store", required=False, dest="SIZE", help="Use smaller set")
-    parser.add_argument("-d", "--downsample-frac", action="store", required=False, dest="DOWNSAMPLE_FRAC", type=float, help="downsample fraction (0-1]")
+    parser.add_argument("-d", "--downsample-frac", action="store", required=False, default=1.0, dest="DOWNSAMPLE_FRAC", type=float, help="downsample fraction (0-1]")
     parser.add_argument("--min-cluster-size", action="store", required=False, default=5, dest="MIN_CLUSTER_SIZE", help="Filter out any ON WG IDENTIFIER classes with less than MIN_CLUSTER_SIZE")
     parser.add_argument("-n", "--num-clusters", action="store", required=False, default=1500, dest="NUM_CLUSTERS", help="Number of clusters for algorithms that require it")
     args = parser.parse_args()
     #print(args.MODELS)
 
-    assert(not (args.DOWNSAMPLE_FRAC) or (args.DOWNSAMPLE_FRAC > 0.0 and args.DOWNSAMPLE_FRAC < 1.0 and args.DOWNSAMPLE_FRAC))
+    assert(not (args.DOWNSAMPLE_FRAC) or (args.DOWNSAMPLE_FRAC > 0.0 and args.DOWNSAMPLE_FRAC <= 1.0 and args.DOWNSAMPLE_FRAC))
 
 	# get data
     data_reader = DataReader()
@@ -130,22 +164,26 @@ def main():
     train_y = list()
     test_x = list()
     test_y = list()
-    print(test_x_raw.shape)
+    #print(test_x_raw.shape)
     if args.REP == "bow" or args.USE_AUTOENCODER:
         train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, CountVectorizer)
         test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, CountVectorizer, feature_names=feature_names)
-        print(test_x.shape)
+        train_x = train_x.toarray()
+        test_x = test_x.toarray()
+        #print(test_x.shape)
         #print("done converting to bag of words representation")
     elif args.REP == "tfidf":
         train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, TfidfVectorizer)
         test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, TfidfVectorizer, feature_names=feature_names)
+        train_x = train_x.toarray()
+        test_x = test_x.toarray()
         #print("done converting to tfidf representation")
     elif args.REP == "doc2vec":
         train_x, train_y, _ = tokens_to_doc2vec(tokens_train, train_y_raw)
         test_x, train_y, _ = tokens_to_doc2vec(tokens_test, train_y_raw)
         #print("done converting to doc2vec representation")
     elif args.REP == "pca":
-        train_x, train_y, feature_names = token_to_bagofwords(tokens_train, train_y_raw, CountVectorizer)
+        train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, CountVectorizer)
         test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, CountVectorizer, feature_names=feature_names)
 
         #get number of components
@@ -159,7 +197,6 @@ def main():
         train_x = pca.fit_transform(train_x.toarray())
         test_x = pca.fit_transform(test_x.toarray())
 
-
     
     VOCAB_SIZE = train_x.shape[1]
     if args.USE_AUTOENCODER:
@@ -170,12 +207,9 @@ def main():
         train_x = encoder.predict(train_x)
         test_x = encoder.predict(test_x)
         #print("done converting to autoencoder representation")
-    #else:
-    #    train_x = train_x.toarray()
-    #    test_x = test_x.toarray()
 
     # run models
-    print("VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS = " + str(num_clusters) + ", MIN_CLUSTER_SIZE = " + str(args.MIN_CLUSTER_SIZE))
+    print("TRAIN_X SHAPE = " + str(test_x.shape) + ", VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS = " + str(num_clusters) + ", MIN_CLUSTER_SIZE = " + str(args.MIN_CLUSTER_SIZE))
     if "kmeans" in args.MODELS or "all" in args.MODELS:
         if args.REP == "tfidf":
             kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, TfidfVectorizer)
@@ -185,8 +219,10 @@ def main():
         labels = kmeans.get_labels()
 
         # print results
-        print("kmeans, " + args.REP + ", " + str(kmeans.get_sil_score()) + ", " + str(kmeans.get_db_idx_score()))
- 
+        print("kmeans, " + args.REP + ", " + str(args.DOWNSAMPLE_FRAC) + ", " + str(kmeans.get_sil_score()) + ", " + str(kmeans.get_db_idx_score()))
+
+        #find_optimal_clusters(2000, feature_names, train_x, train_y, args.REP)
+        #plot_cluster_size_frequency(train_x, labels, num_clusters) 
         # example queries
         print("getting nearest: ")
         kmeans.get_nearest_neighbours("Y DIR - ANGIOGRAM")
@@ -194,9 +230,10 @@ def main():
         kmeans.get_nearest_neighbours("G TUBE INSERTION")
 
         # get top keywords for clusters
-        print("get top keywords for cluster: ")
+        print("getting top 10 keywords for each cluster: ")
         get_top_keywords(train_x, labels, feature_names, 10)
-
+        '''
+                                                                  
         # plot 500 random clusters
         plt.figure(figsize=(10, 7)) 
         fig, ax = plt.subplots()
@@ -215,7 +252,7 @@ def main():
             cluster_reduced_data = reduced_data[indices[0]]
             print(cluster_reduced_data.shape)
             plt.scatter(cluster_reduced_data[:,0], cluster_reduced_data[:,1], color=col)
-        plt.savefig('kmeans_' +  args.REP + '_' + str(num_clusters_to_plot) + '.tsne.png')  
+        plt.savefig('kmeans_' +  args.REP + '_' + str(num_clusters_to_plot) + '.tsne.png')  '''
     if "lda" in args.MODELS or "all" in args.MODELS:
         # run lda
         lda = Lda(train_x_raw, train_y_raw, 1500, passes=15)
@@ -228,15 +265,23 @@ def main():
         print("dbscan, " + args.REP + ", " + str(dbs.get_sil_score()) + ", " + str(dbs.get_db_idx_score()))
     if "birch" in args.MODELS or "all" in args.MODELS:
         b = Birch_(num_clusters, feature_names, train_x, train_y)
-        print("GMM, " + args.REP + ", " + str(b.get_sil_score()) + ", " + str(b.get_db_idx_score()))
+        print("birch, " + args.REP + ", " + str(b.get_sil_score()) + ", " + str(b.get_db_idx_score()))
     if "hierarchical" in args.MODELS or "all" in args.MODELS:
-        h = Hierarchial(num_clusters, feature_names, train_x, train_y)
+        h = Hierarchical(num_clusters, feature_names, train_x, train_y, args.REP)
         print("hierarchical, " + args.REP + ", " + str(h.get_sil_score()) + ", " + str(h.get_db_idx_score()))
-        plt.figure(figsize=(10, 7)) 
-        tsne = TSNE(n_components=2, verbose=1)
-        tsne_results = tsne.fit_transform(h.get_labels())
-        plt.scatter(train_x[:,0], train_x[:,1], c=h.get_labels(), cmap='rainbow')
-        plt.savefig('hierarchical_results.png')  
+        labels = h.get_labels()
+        # get top keywords for clusters
+        print("getting top 10 keywords for each cluster: ")
+        get_top_keywords(train_x, labels, feature_names, 10)
+        #find_optimal_clusters(2000, feature_names, train_x, train_y, args.REP)
+        #h.get_nearest_neighbours("ANGIOGRAM")
+        #h.get_nearest_neighbours("BIOPSY/ASPIRATION")
+        #h.get_nearest_neighbours("INSERTION")
+        #plt.figure(figsize=(10, 7)) 
+        #tsne = TSNE(n_components=2, verbose=1)
+        #tsne_results = tsne.fit_transform(h.get_labels())
+        #plt.scatter(train_x[:,0], train_x[:,1], c=h.get_labels(), cmap='rainbow')
+        #plt.savefig('hierarchical_results.png')  
     if "gmm" in args.MODELS or "all" in args.MODELS:
         gmm = GMM(num_clusters, feature_names, train_x, train_y)
         print("GMM, " + args.REP + ", " + str(gmm.get_sil_score()) + ", " + str(gmm.get_db_idx_score())) 

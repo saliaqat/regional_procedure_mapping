@@ -11,6 +11,7 @@ import nltk
 from nltk.corpus import stopwords 
 from nltk.tokenize import RegexpTokenizer
 from Models.model import Model
+from Models.clustermodel import ClusterModel
 import gensim
 from gensim import corpora
 from gensim.models.coherencemodel import CoherenceModel
@@ -27,46 +28,17 @@ import warnings
 warnings.filterwarnings("ignore")
 en_stop = set(nltk.corpus.stopwords.words('english'))
 
-class Kmeans(Model):
-    def __init__(self, num_clusters, feature_names, train_x, train_y, vectorizer=CountVectorizer):
+class Kmeans(ClusterModel):
+    def __init__(self, num_clusters, feature_names, train_x, train_y, rep):
+        ClusterModel.__init__(self, train_x, train_y, feature_names, rep)
         self.kmeans_model = KMeans(n_clusters=num_clusters, random_state=0).fit(train_x)
-        self.feature_names = feature_names
-        self.train_x = train_x
-        self.train_y = train_y
-        self.vectorizer = vectorizer
         self.labels = self.kmeans_model.labels_
         self.num_clusters = num_clusters
-        self.sil_score = -100.0
-        self.db_idx_score = -100.0
-
-    def _tokenize(self, query):
-        regex_string=r'[a-zA-Z]+'
-        tokenizer = RegexpTokenizer(regex_string)
-        tokens = tokenizer.tokenize(query.lower())
-        tokens = [ x for x in tokens if x.isalpha()]
-        tokens = [ x for x in tokens if len(x) > 2 ]
-        return tokens
-
-    def _get_cluster_id(self, query):
-        # get the cluster id for a given query
-        # get prediction for a given query
-        tokens = self._tokenize(query)
-        
-        # get representation (bag of words)
-        weights, y, _ = tokens_to_bagofwords([tokens, ], 1, self.vectorizer, self.feature_names)
-        pred_y = self.kmeans_model.predict(weights)
-        
-        return pred_y
 
     def get_nearest_neighbours(self, query):
         print("Search query:" + query)
         # get cluster id
         pred_y = self._get_cluster_id(query)
-
-        # tokenize data and get bag of words
-        tokens = self._tokenize(query)
-        weights, y, _ = tokens_to_bagofwords([tokens, ], 1, self.vectorizer, self.feature_names)
-        #print(weights)
 
         # get all training values in same cluster
         train_x_idx = np.where(self.labels == pred_y)
@@ -96,16 +68,6 @@ class Kmeans(Model):
             neighbours.append(entry)
             #print(entry) 
             print(cluster_set_y[i])
-
-    def eval(self):
-        self.sil_score = metrics.silhouette_score(self.train_x.toarray(), self.labels, metric='euclidean')
-        self.db_idx_score = metrics.davies_bouldin_score(self.train_x.toarray(), self.labels)
-
-        #print(self.sil_score)
-        #print(self.db_idx_score)
-
-        # evaluate with ON WG IDENTIFIER
-        #self.custom_score()
 
     def custom_score(self):
         # evaluate with ON WG IDENTIFIER
@@ -150,15 +112,3 @@ class Kmeans(Model):
         plt.grid(True)
         plt.savefig('custom_scores.png')
 
-    def get_sil_score(self):
-        if self.sil_score < -10:
-            self.eval()
-        return self.sil_score
-
-    def get_db_idx_score(self):
-        if self.db_idx_score < -10:
-            self.eval()
-        return self.db_idx_score
-
-    def get_labels(self):
-        return self.labels
