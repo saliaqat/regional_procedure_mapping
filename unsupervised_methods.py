@@ -256,7 +256,7 @@ def main():
         print("finished running lda")
     if "dbscan" in args.MODELS or "all" in args.MODELS:
         # run dbscan
-        dbs = DBscan(num_clusters, feature_names, train_x, train_y)
+        dbs = DBscan(num_clusters, feature_names, train_x, train_y, args.REP)
         dbs.eval()
         print("dbscan, " + args.REP + ", " + str(dbs.get_sil_score()) + ", " + str(dbs.get_db_idx_score()))
     if "birch" in args.MODELS or "all" in args.MODELS:
@@ -275,16 +275,16 @@ def main():
         if args.queries:
             h.get_nearest_neighbours(args.queries)
     if "gmm" in args.MODELS or "all" in args.MODELS:
-        gmm = GMM(num_clusters, feature_names, train_x, train_y)
+        gmm = GMM(num_clusters, feature_names, train_x, train_y, args.REP)
         print("GMM, " + args.REP + ", " + str(gmm.get_sil_score()) + ", " + str(gmm.get_db_idx_score())) 
     if "meanshift" in args.MODELS or "all" in args.MODELS:
-        ms = Meanshift(feature_names, train_x, train_y)
+        ms = Meanshift(feature_names, train_x, train_y, args.REP)
         print("meanshift, " + args.REP + ", " + str(ms.get_sil_score()) + ", " + str(ms.get_db_idx_score()))
     if "spectral" in args.MODELS or "all" in args.MODELS:
-        sp = Spectral(num_clusters, feature_names, train_x, train_y)
+        sp = Spectral(num_clusters, feature_names, train_x, train_y, args.REP)
         print("spectral, " + args.REP + ", " + str(sp.get_sil_score()) + ", " + str(sp.get_db_idx_score()))
     if "affinity" in args.MODELS or "all" in args.MODELS:
-        af = Affinity(num_clusters, feature_names, train_x, train_y)
+        af = Affinity(num_clusters, feature_names, train_x, train_y, args.REP)
         print("affinity, " + args.REP + ", " + str(af.get_sil_score()) + ", " + str(af.get_db_idx_score()))
 
 if __name__ == '__main__':
