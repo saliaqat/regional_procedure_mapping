@@ -78,21 +78,16 @@ def find_optimal_clusters(max_k, feature_names, train_x, train_y, rep):
     iters = [2] + list(range(100, max_k+1, 100))
     sse = []
     for k in iters:
-        #kmeans = ""
-        h = ""
-        if rep == "tfidf":
-            h = Hierarchical(k, feature_names, train_x, train_y, rep)
-            #kmeans = Kmeans(k, feature_names, train_x, train_y, TfidfVectorizer)
-        else:
-            h = Hierarchical(k, feature_names, train_x, train_y, rep)
-            #kmeans = Kmeans(k, feature_names, train_x, train_y, CountVectorizer)
+        kmeans = ""
+        #h = ""
+        kmeans = Kmeans(k, feature_names, train_x, train_y, rep)
         #sse.append(kmeans.kmeans_model.inertia_)
-        sse.append(h.get_sil_score())
-        print('Fit '+ str(k)  + ' clusters: ' + str(h.get_sil_score()))
-        
+        sse.append(kmeans.get_sil_score())
+        print('Fit '+ str(k)  + ' clusters: ' + str(kmeans.get_sil_score()))
+
     f, ax = plt.subplots(1, 1)
     ax.plot(iters, sse, marker='o')
-    ax.set_xlabel('Number of cluster Centers (k)')
+    ax.set_xlabel('Number of Cluster Centers (k)')
     ax.set_xticks(iters)
     ax.set_xticklabels(iters)
     ax.set_ylabel('SSE')
@@ -105,7 +100,10 @@ def main():
     parser.add_argument("-m", "--model", action="store", required=True, dest="MODELS", nargs='+', choices=['all', 'kmeans', 'lda', 'dbscan', 'birch', 'hierarchical', 'gmm', 'meanshift', 'spectral', 'affinity'], help="Run model")
     parser.add_argument("-r", "--rep",   action="store", required=False, dest="REP", choices=['bow', 'tfidf', 'doc2vec', 'pca'], help="Use bag of words representation (BOW), tfidf, doc2vec representation, or PCA")
     parser.add_argument("--use-autoencoder", action="store_true", dest="USE_AUTOENCODER", help="Use autoencoders to reduce representations")
-    #parser.add_argument("--use-doc2vec", action="store_true", dest="USE_DOC2VEC", help="Use doc2vec representations")
+    parser.add_argument("--use-doc2vec", action="store_true", dest="USE_DOC2VEC", help="Use doc2vec representations")
+    parser.add_argument("--queries", action="store", dest="queries", nargs='+', help="Return closest neighbours for query words to test search querying capabilities")
+    parser.add_argument("--print-keywords", action="store_true", dest="PRINT_KEYWORDS", help="Use if you want to print keywords in each cluster")
+    parser.add_argument("--find-optimal-k",  action="store_true", dest="FIND_OPTIMAL_K", help="Find optimal K")
     parser.add_argument("-s", "--sample-size", action="store", required=False, dest="SIZE", help="Use smaller set")
     parser.add_argument("-d", "--downsample-frac", action="store", required=False, default=1.0, dest="DOWNSAMPLE_FRAC", type=float, help="downsample fraction (0-1]")
     parser.add_argument("--min-cluster-size", action="store", required=False, default=5, dest="MIN_CLUSTER_SIZE", help="Filter out any ON WG IDENTIFIER classes with less than MIN_CLUSTER_SIZE")
@@ -211,27 +209,25 @@ def main():
     # run models
     print("TRAIN_X SHAPE = " + str(test_x.shape) + ", VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS = " + str(num_clusters) + ", MIN_CLUSTER_SIZE = " + str(args.MIN_CLUSTER_SIZE))
     if "kmeans" in args.MODELS or "all" in args.MODELS:
-        if args.REP == "tfidf":
-            kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, TfidfVectorizer)
-        else:
-            kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, CountVectorizer)
+        kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, args.REP)
         kmeans.eval()
         labels = kmeans.get_labels()
 
         # print results
         print("kmeans, " + args.REP + ", " + str(args.DOWNSAMPLE_FRAC) + ", " + str(kmeans.get_sil_score()) + ", " + str(kmeans.get_db_idx_score()))
-
-        #find_optimal_clusters(2000, feature_names, train_x, train_y, args.REP)
+        if args.FIND_OPTIMAL_K:
+            find_optimal_clusters(2000, feature_names, train_x, train_y, args.REP)
         #plot_cluster_size_frequency(train_x, labels, num_clusters) 
         # example queries
         print("getting nearest: ")
-        kmeans.get_nearest_neighbours("Y DIR - ANGIOGRAM")
-        kmeans.get_nearest_neighbours("US KNEE BIOPSY/ASPIRATION")
-        kmeans.get_nearest_neighbours("G TUBE INSERTION")
+        if args.queries:
+            for q in args.queries:
+                kmeans.get_nearest_neighbours(str(q))
 
-        # get top keywords for clusters
-        print("getting top 10 keywords for each cluster: ")
-        get_top_keywords(train_x, labels, feature_names, 10)
+        if args.PRINT_KEYWORDS:
+            # get top keywords for clusters
+            print("getting top 10 keywords for each cluster: ")
+            get_top_keywords(train_x, labels, feature_names, 10)
         '''
                                                                   
         # plot 500 random clusters
@@ -264,24 +260,20 @@ def main():
         dbs.eval()
         print("dbscan, " + args.REP + ", " + str(dbs.get_sil_score()) + ", " + str(dbs.get_db_idx_score()))
     if "birch" in args.MODELS or "all" in args.MODELS:
-        b = Birch_(num_clusters, feature_names, train_x, train_y)
+        b = Birch_(num_clusters, feature_names, train_x, train_y, args.REP)
         print("birch, " + args.REP + ", " + str(b.get_sil_score()) + ", " + str(b.get_db_idx_score()))
     if "hierarchical" in args.MODELS or "all" in args.MODELS:
         h = Hierarchical(num_clusters, feature_names, train_x, train_y, args.REP)
         print("hierarchical, " + args.REP + ", " + str(h.get_sil_score()) + ", " + str(h.get_db_idx_score()))
         labels = h.get_labels()
         # get top keywords for clusters
-        print("getting top 10 keywords for each cluster: ")
-        get_top_keywords(train_x, labels, feature_names, 10)
-        #find_optimal_clusters(2000, feature_names, train_x, train_y, args.REP)
-        #h.get_nearest_neighbours("ANGIOGRAM")
-        #h.get_nearest_neighbours("BIOPSY/ASPIRATION")
-        #h.get_nearest_neighbours("INSERTION")
-        #plt.figure(figsize=(10, 7)) 
-        #tsne = TSNE(n_components=2, verbose=1)
-        #tsne_results = tsne.fit_transform(h.get_labels())
-        #plt.scatter(train_x[:,0], train_x[:,1], c=h.get_labels(), cmap='rainbow')
-        #plt.savefig('hierarchical_results.png')  
+        if args.PRINT_KEYWORDS:
+            print("getting top 10 keywords for each cluster: ")
+            get_top_keywords(train_x, labels, feature_names, 10)
+        if args.FIND_OPTIMAL_K:
+            find_optimal_clusters(2000, feature_names, train_x, train_y, args.REP)
+        if args.queries:
+            h.get_nearest_neighbours(args.queries)
     if "gmm" in args.MODELS or "all" in args.MODELS:
         gmm = GMM(num_clusters, feature_names, train_x, train_y)
         print("GMM, " + args.REP + ", " + str(gmm.get_sil_score()) + ", " + str(gmm.get_db_idx_score())) 
