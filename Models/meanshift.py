@@ -11,28 +11,23 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
-from Models.model import Model
-from Models.clustermodel import ClusterModel
-import gensim
-from gensim import corpora
-from gensim.models.coherencemodel import CoherenceModel
 import pickle
 import seaborn as sns
 from data_manipulator import *
-from sklearn.cluster import KMeans
+from Models.model import Model
+from Models.clustermodel import ClusterModel
+from sklearn.cluster import MeanShift
+from sklearn.metrics import davies_bouldin_score
 from sklearn.metrics.cluster import homogeneity_score
 from sklearn.metrics.pairwise import euclidean_distances
 import warnings
 
 warnings.filterwarnings("ignore")
-en_stop = set(nltk.corpus.stopwords.words('english'))
-from sklearn.metrics import davies_bouldin_score
-from sklearn.cluster import AffinityPropagation
+# en_stop = set(nltk.corpus.stopwords.words('english'))
 
-
-class Affinity(Model):
+class Meanshift(ClusterModel):
     def __init__(self, num_clusters, feature_names, train_x, train_y, rep):
         ClusterModel.__init__(self, train_x, train_y, feature_names, rep)
-        self.affinity_model = AffinityPropagation().fit(train_x)
-        self.labels = self.affinity_model.labels_
+        self.meanshift_model = MeanShift().fit(train_x)
+        self.labels = self.meanshift_model.labels_
         self.num_clusters = num_clusters

@@ -11,28 +11,22 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
-from Models.model import Model
-from Models.clustermodel import ClusterModel
-import gensim
-from gensim import corpora
-from gensim.models.coherencemodel import CoherenceModel
 import pickle
 import seaborn as sns
 from data_manipulator import *
-from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import homogeneity_score
 from sklearn.metrics.pairwise import euclidean_distances
 import warnings
 
 warnings.filterwarnings("ignore")
-en_stop = set(nltk.corpus.stopwords.words('english'))
+# en_stop = set(nltk.corpus.stopwords.words('english'))
+from Models.model import Model
+from Models.clustermodel import ClusterModel
+from sklearn import mixture
 from sklearn.metrics import davies_bouldin_score
-from sklearn.cluster import AffinityPropagation
 
-
-class Affinity(Model):
-    def __init__(self, num_clusters, feature_names, train_x, train_y, rep):
+class GMM(ClusterModel):
+    def __init__(self, n_components, feature_names, train_x, train_y, rep):
         ClusterModel.__init__(self, train_x, train_y, feature_names, rep)
-        self.affinity_model = AffinityPropagation().fit(train_x)
-        self.labels = self.affinity_model.labels_
-        self.num_clusters = num_clusters
+        self.gmm_model = mixture.GaussianMixture(n_components=n_components, covariance_type='full').fit(train_x)
+        self.labels = self.gmm_model.predict(train_x)
