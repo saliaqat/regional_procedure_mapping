@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from keras.layers.merge import _Merge
-from keras.layers import Input, Dense, Flatten, Dropout, Add, Lambda
+from keras.layers import Input, Dense, Flatten, Dropout, Add, Lambda, Reshape
 from keras.layers import BatchNormalization, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Conv2D, Conv1D, MaxPooling1D
@@ -25,10 +25,10 @@ data_reader = DataReader()
 df = data_reader.get_all_data()
 train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
 
-tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True, remove_repeats=True, remove_short=True)
+tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True, remove_num=True, remove_repeats=True, remove_short=True)
 train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw, vectorizer_class=CountVectorizer)
 
-tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_empty=True, remove_repeats=True, remove_short=True)
+tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_empty=True, remove_num=True, remove_repeats=True, remove_short=True)
 test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, vectorizer_class=CountVectorizer, feature_names=feature_names)
 
 # encode the labels into smaller integers rather than large integers
@@ -38,24 +38,24 @@ train_y = le.transform(train_y.values)
 test_y = le.transform(test_y.values)
 
 # combine train and test
-x = vstack((train_x, test_x)).todense()
+#x = vstack((train_x, test_x)).todense()
+x = np.load('transformed_x.npy').reshape(-1, 1, 5000)
 y = np.concatenate((train_y, test_y))
 
-feature_length = x.shape[1]
+feature_length = x.shape[-1]
 limit = 100
 
-# create dataset for siamese neural network
 # k is the minimum sample needed for each class
-def create_dataset(x, y, k=15, train_ratio=0.66, limit=100):
+def create_dataset(x, y, k=15, train_ratio=0.66, limit=1000):
         
     labels_dict = {}
     for i in range(len(y)):
         if y[i] in labels_dict:
             # cap at only k samples per class
             if len(labels_dict[y[i]]) <= k:
-                labels_dict[y[i]].append(x[i].reshape(feature_length, 1))
+                labels_dict[y[i]].append(x[i].T)
         else:
-            labels_dict[y[i]] = [x[i].reshape(feature_length, 1)]
+            labels_dict[y[i]] = [x[i].T]
 
     labels_dict_train = {}
     labels_dict_test = {}
@@ -70,29 +70,28 @@ def create_dataset(x, y, k=15, train_ratio=0.66, limit=100):
             labels.append(label)
         counter += 1
     
-    # create training dataset
+    del labels_dict
+    
+    # create train/test dataset
     train_dataset = []
     train_labels = []
-    for label in labels_dict_train:
-        samples = labels_dict_train[label]
-        samples = np.hstack(samples)
-        train_dataset.append(samples)
-        train_labels.append(label)
-        
-    # create testing dataset
     test_dataset = []
     test_labels = []
-    for label in labels_dict_test:
-        samples = labels_dict_test[label]
-        samples = np.hstack(samples)
-        test_dataset.append(samples)
+    for label in labels_dict_train:
+        train_samples = labels_dict_train[label]
+        train_samples = np.hstack(train_samples)
+        test_samples = labels_dict_test[label]
+        test_samples = np.hstack(test_samples)
+        train_dataset.append(train_samples)
+        train_labels.append(label)
+        test_dataset.append(test_samples)
         test_labels.append(label)
     
     # reshape train dataset to (num_class, num_samples, features)
     train_dataset = np.array(train_dataset)
-    train_dataset = train_dataset.reshape(train_dataset.shape[0], train_dataset.shape[2], train_dataset.shape[1])
+    train_dataset = np.swapaxes(train_dataset, 1, 2)
     test_dataset = np.array(test_dataset)
-    test_dataset = test_dataset.reshape(test_dataset.shape[0], test_dataset.shape[2], test_dataset.shape[1])
+    test_dataset = np.swapaxes(test_dataset, 1, 2)
     
     return train_dataset, test_dataset, np.array(train_labels), np.array(test_labels)
 
@@ -109,8 +108,8 @@ train_onehot_labels = np_utils.to_categorical(train_labels)
 test_onehot_labels = np_utils.to_categorical(test_labels)
 
 # ================= Create Prototypical Netowrks model ======================#
-n_c = limit # total np. of classes
-n_epi_c = 100 # no. of classes per training episode
+n_c = len(train_dataset) # total np. of classes
+n_epi_c = 50 # no. of classes per training episode
 n_epochs = 10000000000
 n_episodes = int(n_c / n_epi_c)
 n_support = 5
@@ -127,9 +126,9 @@ def cosine_distance(x):
   
 # define the encoder
 encoder = Sequential()
-encoder.add(Dense(1000, activation='relu', input_dim=feature_length))
-encoder.add(Dense(500, activation='relu'))
-encoder.add(Dense(250, activation='relu'))
+encoder.add(Dense(100, activation='relu', input_dim=feature_length))
+#encoder.add(Dense(500, activation='relu'))
+#encoder.add(Dense(250, activation='relu'))
 
 #encode each of the two inputs into a vector with the convnet
 support_inp = Input(shape=(n_support, feature_length))
@@ -142,10 +141,11 @@ distance = Lambda(euclidean_distance)([encoded_support, encoded_query])
 softmax = Dense(n_c, activation='softmax')(distance)
 
 proto_net = Model(input=[support_inp, query_inp], output=softmax)
-opt = Adam(lr=0.1)
+opt = Adam(lr=0.01)
 proto_net.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['categorical_accuracy'])
 print(proto_net.summary())
 
+k = True
 for e in range(1, n_epochs + 1):
     
     for i in range(1, n_episodes + 1):
@@ -164,9 +164,77 @@ for e in range(1, n_epochs + 1):
         query = epi_data[:, idx_query, :]
         loss = proto_net.train_on_batch(x=[support, query], y=epi_label)
     
-    # update the learning rate every 200 epochs
-    if e % 200 == 0:
-        curr_lr = K.eval(proto_net.optimizer.lr) * 0.8
-        K.set_value(proto_net.optimizer.lr, curr_lr)
-        
     print('{}: Training loss: {}, Training acc: {}'.format(e, round(loss[0], 4), round(loss[1], 4)))
+    
+    # update the learning rate every 200 epochs
+    if (e % 200 == 0) and k:
+        curr_lr = K.eval(proto_net.optimizer.lr) * 0.9
+        K.set_value(proto_net.optimizer.lr, curr_lr)
+        if e >= 1000:
+            K.set_value(proto_net.optimizer.lr, 0.0001)
+            k = False
+        
+    
+
+
+# =============== Dimension reduction and t-SNE plotting ======================#
+
+#from sklearn.decomposition import TruncatedSVD, PCA
+#svd = TruncatedSVD(n_components=5000, n_iter=20, random_state=42)
+#svd = PCA(n_components=5000)
+#x = svd.fit_transform(x) 
+#x = np.load('transformed_x.npy').reshape(-1, 1, 5000)
+
+#lg = MultiClassLogisticRegression()
+#lg.train(transformed_x, train_y)
+#print('Score: ', lg.score(svd.transform(test_x.todense(), test_y)))
+#
+#from sklearn.manifold import TSNE
+#tsne = TSNE(n_components=2, verbose=1)
+#tsne_results = tsne.fit_transform(transformed_x)
+#
+## get the top N classes
+#unique, counts = np.unique(y, return_counts=True)
+#count_dict = {}
+#for i in range(len(counts)):
+#    if counts[i] not in count_dict:
+#        count_dict[counts[i]] = unique[i]
+#        
+#max_class = 50
+#counter = 0
+#max_class_values = []
+#for count in reversed(sorted(count_dict.keys())):
+#    if counter > max_class:
+#        break
+#    else:
+#        max_class_values.append(count_dict[count])
+#    counter += 1
+#        
+## plot t-SNE
+#plt.figure(figsize=(15, 15))
+#for i in max_class_values[:10]:
+#    indices = np.where(y == i)
+#    plt.scatter(tsne_results[indices, 0], tsne_results[indices, 1], label=i)
+#plt.legend()
+#plt.savefig('tsne_5000_pca-10')
+#plt.show()
+#
+## plot t-SNE
+#plt.figure(figsize=(15, 15))
+#for i in max_class_values[:20]:
+#    indices = np.where(y == i)
+#    plt.scatter(tsne_results[indices, 0], tsne_results[indices, 1], label=i)
+#plt.legend()
+#plt.savefig('tsne_5000_pca-20')
+#plt.show()
+#
+## plot t-SNE
+#plt.figure(figsize=(15, 15))
+#for i in max_class_values[:30]:
+#    indices = np.where(y == i)
+#    plt.scatter(tsne_results[indices, 0], tsne_results[indices, 1], label=i)
+#plt.legend()
+#plt.savefig('tsne_5000_pca-30')
+#plt.show()
+#
+#print('Variance for ' + str(5000) + 'components: ', svd.explained_variance_ratio_.sum()) 
