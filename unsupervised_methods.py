@@ -22,15 +22,9 @@ import nltk
 from keras.layers import Input,Conv2D,MaxPooling2D,UpSampling2D
 from keras.models import Model
 from keras.optimizers import RMSprop
+from Models.clustermodel import Affinity, Birch_, GMM, Hierarchical, Kmeans, Meanshift, Spectral
 from Models.lda import Lda
-from Models.kmeans import Kmeans
 from Models.dbscan import DBscan
-from Models.birch import Birch_
-from Models.hierarchical import Hierarchical
-from Models.gmm import GMM
-from Models.meanshift import Meanshift
-from Models.spectral import Spectral
-from Models.affinity import Affinity
 from run_autoencoder import get_encoder
 
 from sklearn.manifold import TSNE
@@ -75,6 +69,9 @@ def plot_cluster_size_frequency(data, clusters, nc):
 
 # code from: https://www.kaggle.com/jbencina/clustering-documents-with-tfidf-and-kmeans
 def find_optimal_clusters(max_k, feature_names, train_x, train_y, rep):
+    num_samples = train_x.shape[0]
+    if max_k > num_samples:
+        max_k = num_samples
     iters = [2] + list(range(100, max_k+1, 100))
     sse = []
     for k in iters:
@@ -90,8 +87,9 @@ def find_optimal_clusters(max_k, feature_names, train_x, train_y, rep):
     ax.set_xlabel('Number of Cluster Centers (k)')
     ax.set_xticks(iters)
     ax.set_xticklabels(iters)
-    ax.set_ylabel('SSE')
-    ax.set_title('SSE by Cluster Center Plot')
+    ax.tick_params(axis = 'both', which = 'major', labelsize = 10)
+    ax.set_ylabel('Silhouette Coefficient')
+    ax.set_title('Silhouette Coefficient by Cluster Center Plot')
     plt.savefig('vary_k.png', dpi=1000)
 
 def main():
@@ -128,6 +126,7 @@ def main():
     #train_y_raw = pd.concat([train_y_raw, test_y_raw], axis=0)
     train_x_raw.drop(['RIS PROCEDURE CODE'], axis=1, inplace=True)
     test_x_raw.drop(['RIS PROCEDURE CODE'], axis=1, inplace=True)
+    print(train_x_raw.shape)
 
     # identify ON WG IDENTIFIERS that occur infrequently
     #print("MIN_CLUSTER_SIZE: " + str(args.MIN_CLUSTER_SIZE))
@@ -144,6 +143,7 @@ def main():
     #print(len(unique_ids))
     num_clusters = len(unique_ids) - len(small_clusters)
     #print("NUM_CLUSTERS: " + str(num_clusters))
+    print(train_x_raw.shape)
 
     # append the ON WG IDENTIFIERS to the original documents
     train_y_raw = pd.concat([train_x_raw, train_y_raw], axis=1)
@@ -155,7 +155,7 @@ def main():
     tokens_test, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, regex_string=r'[a-zA-Z0-9]+', 
         save_missing_feature_as_string=False, remove_short=True, remove_num=True, remove_empty=True)
     #print("done tokenizing columns")
-
+    print(train_x_raw.shape)
     # get representation of data
     feature_names = list()
     train_x = list()
@@ -168,11 +168,11 @@ def main():
         test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, CountVectorizer, feature_names=feature_names)
         train_x = train_x.toarray()
         test_x = test_x.toarray()
-        #print(test_x.shape)
         #print("done converting to bag of words representation")
     elif args.REP == "tfidf":
         train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, TfidfVectorizer)
         test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, TfidfVectorizer, feature_names=feature_names)
+        print(train_x.shape)
         train_x = train_x.toarray()
         test_x = test_x.toarray()
         #print("done converting to tfidf representation")
@@ -207,7 +207,7 @@ def main():
         #print("done converting to autoencoder representation")
 
     # run models
-    print("TRAIN_X SHAPE = " + str(test_x.shape) + ", VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS = " + str(num_clusters) + ", MIN_CLUSTER_SIZE = " + str(args.MIN_CLUSTER_SIZE))
+    print("TRAIN_X SHAPE = " + str(train_x.shape) + ", VOCAB_SIZE = " + str(VOCAB_SIZE) + ", NUM_CLUSTERS = " + str(num_clusters) + ", MIN_CLUSTER_SIZE = " + str(args.MIN_CLUSTER_SIZE))
     if "kmeans" in args.MODELS or "all" in args.MODELS:
         kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, args.REP)
         kmeans.eval()
