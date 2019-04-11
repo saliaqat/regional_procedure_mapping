@@ -161,11 +161,12 @@ class MultiClassNNScratch(NeuralNet):
 
         inputs = Input(shape=(features, ), name="input")
 
-        x = Dense(8192, activation="relu", name="dense1")(inputs)
-        x = Dense(4096, activation="relu", name="dense2")(x)
+        x = Dense(7750, activation="relu", name="dense1")(inputs)
+        # x = Dense(4096, activation="relu", name="dense2")(x)
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)
+        self.model.summary()
         self.model.compile(optimizer="adam", loss='categorical_crossentropy', metrics=["acc", top_3_accuracy, top_k_categorical_accuracy])
         self.name = 'multiclassNNScratch'
 
@@ -185,7 +186,7 @@ class MultiClassNNScratch(NeuralNet):
 
     def train(self, val_x, val_y):
         # val_x =val_x.A.reshape(val_x.shape[0], 1, val_x.shape[1])
-        callbacks = [EarlyStopping(monitor='val_loss', patience=10),
+        callbacks = [EarlyStopping(monitor='val_loss', patience=3, mode='min'),
                      ModelCheckpoint(filepath='best_nn_model_%s.h5' % self.name, monitor='val_loss',
                                      save_best_only=True)]
         self.model.fit(self.train_x, self.train_y, batch_size=self.batch_size, epochs=self.epochs,

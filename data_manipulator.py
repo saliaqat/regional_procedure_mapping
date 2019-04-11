@@ -26,6 +26,14 @@ text_columns_with_desc = [('RIS PROCEDURE CODE', "risproccode"), ('RIS PROCEDURE
                    ('PACS STUDY DESCRIPTION', "pacsstudydesc"), ('PACS BODY PART', "pacsbodypart"), ('PACS MODALITY', "pacsmodality")]
 label_columns = ['ON WG IDENTIFIER']
 
+def prep_single_test_set(input_df, random_state=1337, label=label_columns, test_size=0.25):
+    # dropping src_file since its is not a feature
+    df = input_df.drop('src_file', axis=1)
+
+    train_x = df.drop(label, axis=1)
+    train_y = df[label]
+
+    return train_x, train_y
 
 def get_train_test_split(input_df, random_state=1337, label=label_columns, test_size=0.25):
     # dropping src_file since its is not a feature
@@ -213,3 +221,13 @@ def normalize_east_dir_df(df):
     df =  df[columns]
     df.columns = new_names
     return df
+
+
+def get_x_y_split(input_df, label=label_columns):
+    df = input_df.drop('src_file', axis=1)
+
+    df_x = df.drop(label, axis=1)
+    df_y = df[label]
+
+
+    return df_x, df_y
