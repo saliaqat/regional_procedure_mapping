@@ -5,7 +5,6 @@ __pycache__/
 output/*
 *.pyc
 Models/*.pyc
-*.png
 tsne_plot_history.txt
 tmp.csv
 cache/

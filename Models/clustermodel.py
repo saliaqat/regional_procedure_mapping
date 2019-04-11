@@ -287,3 +287,11 @@ class Affinity(ClusterModel):
         self.labels = self.affinity_model.labels_
         self.num_clusters = num_clusters
 
+class Baseline(Model):
+    def __init__(self, num_clusters, feature_names, train_x, train_y, rep):
+        ClusterModel.__init__(self, train_x, train_y, feature_names, rep)
+        # self.affinity_model = AffinityPropagation().fit(train_x)
+        self.labels = self.train_y['ON WG IDENTIFIER'].values
+        self.num_clusters = 1500
+
+
