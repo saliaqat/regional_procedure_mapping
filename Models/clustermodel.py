@@ -113,7 +113,6 @@ class Birch_(ClusterModel):
         self.birch_model = Birch(n_clusters=num_clusters).fit(train_x)
         self.birch_model.predict(train_x)
         self.labels = self.birch_model.labels_
-        print(self.labels)
         self.num_clusters = num_clusters
 
 class GMM(ClusterModel):
@@ -281,7 +280,7 @@ class Spectral(ClusterModel):
         self.labels = self.spectral_model.labels_
         self.num_clusters = num_clusters
 
-class Affinity(Model):
+class Affinity(ClusterModel):
     def __init__(self, num_clusters, feature_names, train_x, train_y, rep):
         ClusterModel.__init__(self, train_x, train_y, feature_names, rep)
         self.affinity_model = AffinityPropagation().fit(train_x)
