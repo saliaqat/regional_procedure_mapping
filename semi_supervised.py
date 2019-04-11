@@ -277,7 +277,7 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
         # run testing in a non-parametric way   
         score = siamese_net.score_non_parametric(uc_test_samples, uc_test_labels, uc_support_set)
         
-        print('SNN {} unseen class accuracy: {}%'.format(unseen_num_class, round(score, 1)))
+        print('Siamese NN {} unseen class accuracy: {}%'.format(unseen_num_class, round(score, 1)))
 
     #========================================================================#
     #=================== Evaluation with baseline KNN =======================#
