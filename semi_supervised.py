@@ -1,4 +1,3 @@
-from __future__ import print_function, division
 from keras.layers import Input, Dense
 from keras.models import Model
 from keras.callbacks import EarlyStopping
@@ -7,8 +6,8 @@ import numpy as np
 from sklearn import preprocessing
 from data_reader import DataReader
 from data_manipulator import *
-from Model.siamese import SiameseNN
-from Model.knn import KNN
+from Models.siamese import SiameseNN
+from Models.knn import KNN
 import sys
 import random
 import warnings
@@ -50,7 +49,7 @@ def create_pair(labels_dict, labels):
     return dataset_sim + dataset_diff, targets_sim + targets_diff
 
 # helper function to create pairwise dataset for siamese neural network
-def create_pairwise_dataset(x, y, k=15, train_ratio=0.66, limit=100):
+def create_pairwise_dataset(x, y, k=15, train_ratio=0.66, limit=100, unseen_num_class=10):
         
     labels_dict = {}
     for i in range(len(y)):
@@ -70,10 +69,10 @@ def create_pairwise_dataset(x, y, k=15, train_ratio=0.66, limit=100):
     m = 0
     
     # randomly pick unknown classes to test the model on unseen classes
-    unknown_class_indices = np.random.permutation(np.arange(limit+1, 1000))[:zero_shot]
+    unknown_class_indices = np.random.permutation(np.arange(limit+1, 1000))[:unseen_num_class]
 
     for label in sorted(labels_dict):
-        if counter > limit + zero_shot:
+        if counter > limit + unseen_num_class:
             break
         elif counter > limit:
             if len(labels_dict[unknown_class_indices[m]]) >= k:
@@ -86,38 +85,43 @@ def create_pairwise_dataset(x, y, k=15, train_ratio=0.66, limit=100):
         else:
             if len(labels_dict[label]) >= k: 
                 labels_dict_train[label] = labels_dict[label][:int(np.ceil(k*train_ratio))]
+                labels_dict_test[label] = labels_dict[label][int(np.ceil(k*train_ratio)):k]
                 labels.append(label)
         counter += 1
-        
-    counter = 0
-    test_limit = int(limit)
-    for label in sorted(labels_dict):
-        if counter > test_limit:
-            break
-        if (label in labels_dict_train) or (label in uc_support_set):
-            pass
-        else:
-            labels_dict_test[label] = labels_dict[label][:int(np.ceil(k*train_ratio))]
-            counter += 1
+       
+    # to validate on unseen classes
+#    counter = 0
+#    for label in sorted(labels_dict):
+#        if counter > limit:
+#            break
+#        if (label in labels_dict_train) or (label in uc_support_set):
+#            pass
+#        else:
+#            labels_dict_test[label] = labels_dict[label][:int(np.ceil(k*train_ratio))]
+#            counter += 1
             
     # delete the other samples 
     del labels_dict
     
-    print('Creating dataset with total classess of {} ..'.format(len(labels_dict_train)))
+#    print('===================================================')
+    
+#    print('Creating dataset with total classess of {} ..'.format(len(labels_dict_train)))
         
     train_x, train_y = create_pair(labels_dict_train, labels)
 
-    print('Total samples created for training: {}'.format(len(train_y)))
+#    print('Total samples created for training: {}'.format(len(train_y)))
     
     test_x, test_y = create_pair(labels_dict_test, labels)
     
-    print('Total samples created for testing: {}'.format(len(test_y)))
+#    print('Total samples created for testing: {}'.format(len(test_y)))
+    
+#    print('===================================================')
     
     return train_x, test_x, train_y, test_y, labels_dict_train, labels_dict_test, uc_support_set, uc_test_samples, uc_test_labels
 
 
 # function to run few shot algorithm with Siamese NN
-def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score):
+def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score, limit, unseen_num_class):
     
     # get the data
     data_reader = DataReader()
@@ -147,7 +151,7 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
     train_paired, test_paired, \
     train_paired_target, test_paired_target, \
     labels_dict_train, labels_dict_test, \
-    uc_support_set, uc_test_samples, uc_test_labels = create_pairwise_dataset(x, y)
+    uc_support_set, uc_test_samples, uc_test_labels = create_pairwise_dataset(x, y, limit=limit, unseen_num_class=unseen_num_class)
     
     # set the data as separate numpy array to be passed into model
     pair1_train = []
@@ -182,24 +186,24 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
     pair1_test = pair1_test.reshape(-1, feature_size)
     pair2_test = pair2_test.reshape(-1, feature_size)   
     
+    input_shape = pair1_train.shape[1]
+
     # if train the model from scratch
     if train:
     
         # siamese neural network structure 
-        input_shape = pair1_train.shape[1]
-
         siamese_net = SiameseNN(input_shape)
 
         siamese_net.train([pair1_train, pair2_train], train_paired_target, 
                           [pair1_test, pair2_test], test_paired_target)
         
-        siamese_net.save('siamese-' + str(limit) + '.h5')
+        siamese_net.save('siamese-' + str(limit))
      
     # if load the pre-trained model
     else:
         
         siamese_net = SiameseNN(input_shape)
-        siamese_net.load_model('siamese-' + str(limit) + '.h5')
+        siamese_net.load('siamese-' + str(limit))
     
     #========================================================================#
     #======================= Prepare data for testing ========================#
@@ -214,11 +218,11 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
         else:
             support_set[labelA] = labels_dict_train[labelA]
             counter += 1
-        
+    
     # training data for kNN and neural network
     x_train = []
     y_train = []
-    counter = 1
+    counter = 0
     for label in sorted(labels_dict_train):
         if counter > limit:
             break
@@ -230,7 +234,7 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
     x_train = np.array(x_train)
     x_train = x_train.reshape(-1, x_train.shape[-1])
     y_train = np.array(y_train).reshape(-1, 1)
-    
+
     # testing data for kNN and neural network
     test_samples = []
     test_labels = []
@@ -240,48 +244,40 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
             break
         else:
             samples = labels_dict_test[labelA]
-            idxs = np.random.permutation(len(samples))[:3]
+            idxs = np.random.permutation(len(samples))
             for k in idxs:
                 test_samples.append(samples[k])
                 test_labels.append(labelA)
             counter += 1  
     test_samples = np.array(test_samples)
-    test_samples = test_samples.reshape(-1, test_samples.shape[-1])
-    test_labels = np.array(test_labels).reshape(-1, 1)
-    
+
     #========================================================================#
     #================ Evaluation for SNN on seen classes ====================#
     #========================================================================#
     
     if snn_seen_score:
         
+        print('=================================================')
+        print('Running test on seen classes with Siamese NN ....')
+        
         # run testing in a non-parametric way    
-        correct = 0
-        total = 0
-        for i in range(len(test_samples)):
-            outputs = []
-            labels = []
-            for s in support_set:
-                samples = support_set[s]
-                idx = np.random.permutation(len(samples))
-                d = 0
-                for j in idx:
-                    d += siamese_net.predict([samples[j], test_samples[i]])
-                distance = d / len(idx)
-                outputs.append(distance)
-                labels.append(s)
-            topK = topk_var
-            idxs = sorted(range(len(outputs)), key=lambda z: outputs[z])[:topK]
-            possible_labels = []
-            for z in idxs:
-                possible_labels.append(labels[z])
-            if test_labels[i] in possible_labels:
-                correct += 1
-            total += 1
-           
-        score = (correct/total)*100
-        score = (correct/total)*100
-        print('SNN seen class score: {}%: '.format(score))
+        score = siamese_net.score_non_parametric(test_samples, test_labels, support_set)
+        
+        print('Siamese NN seen class accuracy with {} classes: {}%'.format(limit, round(score,1)))
+
+    #========================================================================#
+    #============== Evaluation for SNN on unseen classes ====================#
+    #========================================================================#
+    
+    if snn_unseen_score:
+        
+        print('=================================================')
+        print('Running test on unseen classes with Siamese NN ....')
+  
+        # run testing in a non-parametric way   
+        score = siamese_net.score_non_parametric(uc_test_samples, uc_test_labels, uc_support_set)
+        
+        print('SNN {} unseen class accuracy: {}%'.format(unseen_num_class, round(score, 1)))
 
     #========================================================================#
     #=================== Evaluation with baseline KNN =======================#
@@ -289,10 +285,17 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
         
     if knn_score:
         
+        print('=================================================')
+        print('Running test on kNN algorithm ....')
+
+        test_samples = test_samples.reshape(-1, test_samples.shape[-1])
+        test_labels = np.array(test_labels).reshape(-1, 1)
         knn = KNN(n_neighbors=10)
         knn.train(x_train, y_train)
         score = knn.score(test_samples, test_labels)*100
-        print('kNN score: {}%: '.format(score))
+        
+        print('kNN accuracy with {} classes: {}%'.format(limit, round(score, 1)))
+
     
     #========================================================================#
     #=================== Evaluation with Neural Network =====================#
@@ -300,6 +303,9 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
     
     if nn_score:
         
+        print('=================================================')
+        print('Running train and test on neural network ....')
+                
         inputs = Input(shape=(feature_size, ), name="input")
     
         x = Dense(7750, activation="relu", name="dense1", input_dim=feature_size)(inputs)
@@ -311,57 +317,29 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
         
         y_train_onehot = np_utils.to_categorical(y_train)
         
+        test_samples = test_samples.reshape(-1, test_samples.shape[-1])
+        test_labels = np.array(test_labels).reshape(-1, 1)
         test_labels_onehot = np_utils.to_categorical(test_labels)
-        nn.fit(x_train, y_train_onehot, batch_size=256, epochs=100,
+        nn.fit(x_train, y_train_onehot, batch_size=256, epochs=100,verbose=0, 
                        callbacks=callbacks, validation_data=(test_samples, test_labels_onehot))
         
         score, acc = nn.evaluate(test_samples, test_labels_onehot)
         
-        print('Neural network score: {}%: '.format(score))
+        print('Neural network acuracy with {} classes: {}%'.format(limit, round(score, 1)))
+
     
-    #========================================================================#
-    #============== Evaluation for SNN on unseen classes ====================#
-    #========================================================================#
-    
-    if snn_unseen_score:
-        
-        # run testing in a non-parametric way   
-        correct = 0
-        total = 0
-        for i in range(len(uc_test_samples)):
-            outputs = []
-            labels = []
-            for s in uc_support_set:
-                samples = uc_support_set[s]
-                idx = np.random.permutation(len(samples))
-                d = 0
-                for j in idx:
-                    d += siamese_net.predict([uc_test_samples[i], samples[j]])
-                distance = d / len(idx)
-                outputs.append(distance)
-                labels.append(s)
-            topK = topk_var
-            idxs = sorted(range(len(outputs)), key=lambda z: outputs[z])[:topK]
-            possible_labels = []
-            for z in idxs:
-                possible_labels.append(labels[z])
-            if uc_test_labels[i] in possible_labels:
-                correct += 1
-            total += 1
-            
-        score = (correct/total)*100
-        print('SNN unseen class score: {}%: '.format(score))
 
-
-if __name__ == '__main__':
-
-    variable1 = int(sys.argv[1])
-    limit = variable1
-    variable2 = int(sys.argv[2])
-    zero_shot = variable2
-
-    siamese_fewshot(train=True, 
-                    snn_seen_score=True, 
-                    snn_unseen_score=True, 
-                    knn_score=True, 
-                    nn_score=True)
+#if __name__ == '__main__':
+#
+#    variable1 = int(sys.argv[1])
+#    limit = variable1
+#    variable2 = int(sys.argv[2])
+#    unseen_num_class = variable2
+#
+#    siamese_fewshot(train=True, 
+#                    snn_seen_score=True, 
+#                    snn_unseen_score=False, 
+#                    knn_score=False, 
+#                    nn_score=False, 
+#                    limit=limit,
+#                    unseen_num_class=unseen_num_class)
