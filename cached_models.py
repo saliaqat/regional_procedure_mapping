@@ -55,6 +55,14 @@ def _get_multiclass_logistic_regression_model_bag_of_words_full(train_x, train_y
     lg.train(train_x, train_y)
 
     return lg
+
+@Cachable("get_multiclass_logistic_regression_model_tfidf.pkl", version=1)
+def _get_multiclass_logistic_regression_model_tfidf(train_x, train_y):
+    lg = MultiClassLogisticRegression(name='multiclass_logistic_regression_tfidf')
+    lg.train(train_x, train_y)
+
+    return lg
+
 # 0.7962874821513565
 @Cachable("get_multiclass_logistic_regression_model_bag_of_words_full_save_missing.pkl", version=1)
 def _get_multiclass_logistic_regression_model_bag_of_words_full_save_missing(train_x, train_y):
@@ -130,6 +138,13 @@ def _get_random_forest_model_doc2vec_simple_16384(train_x, train_y):
 @Cachable("get_random_forest_model_bag_of_words_full.pkl", version=1)
 def _get_random_forest_model_bag_of_words_full(train_x, train_y):
     random_forest = RandomForest(name='random_forest_bag_of_words_full')
+    random_forest.train(train_x, train_y)
+
+    return random_forest
+
+@Cachable("get_random_forest_model_tfidf.pkl", version=1)
+def _get_random_forest_model_tfidf(train_x, train_y):
+    random_forest = RandomForest(name='random_forest_tfidf')
     random_forest.train(train_x, train_y)
 
     return random_forest
@@ -240,6 +255,14 @@ def _get_naive_bayes_model_bag_of_words_full(train_x, train_y):
     naive_bayes.train(train_x, train_y)
 
     return naive_bayes
+
+@Cachable("get_naive_bayes_model_tfidf.pkl", version=1)
+def _get_naive_bayes_model_tfidf(train_x, train_y):
+    naive_bayes = NaiveBayes(name='NaiveBayes_tfidf')
+    naive_bayes.train(train_x, train_y)
+
+    return naive_bayes
+
 # 0.7296525464064731
 @Cachable("get_naive_bayes_model_bag_of_words_full_save_missing.pkl", version=1)
 def _get_naive_bayes_model_bag_of_words_full_save_missing(train_x, train_y):
@@ -288,6 +311,7 @@ def _get_multinomial_naive_bayes_model_bag_of_words_full_save_missing(train_x, t
     return multinomial_naive_bayes
 #
 #
+# # 2048 input size
 # # 2048 input size
 # @Cachable("multiclass_logistic_regression_model_word2doc.pkl", version=3)
 # def _get_multiclass_logistic_regression_model_word2doc(train_x, train_y):
