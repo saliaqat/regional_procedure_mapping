@@ -1,9 +1,10 @@
-# csc2541_project
+# Sharing is Caring: Medical image consolidation using machine learning
 
 ## Description
-Build an ML classifier to match procedure at each site to a ground truth ontology defined by imaging repository (radlex/LOINC)
+This work started off as a course project, so the code acts as an archive of methods we explored.
 
-Using Python 3.6
+main.py contains the code to generate the evaluation in the paper. A majority of the code was run on a server with a 14 core/28 thread Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz. The server has 128Gb of ram and Nvidia Quadro P4000 (8Gb). On this server, training took anywhere from under a minute up to 12 hours depending on the representation/model used.
+ 
 
 ## Directory Structure
 **input_data/** contains the input data as csv (not uploaded due to privacy concerns/restrictions)
@@ -14,9 +15,9 @@ Using Python 3.6
 
 **data_manipulator.py** is a library that has functions for manipulating data, such as splitting the dataframe into train/test
 
-**Models/logistic_regression.py** is trivial example of a model wrapper, made to work well with our data.
+**Models/** Contains all the models we tried
 
-**main.py** shows sample code to demonstrate workflow
+**main.py** shows the code used to generate results shown in the paper.
 
 ## Development
 To get started, download the .csv files from the Google Drive and paste them into input_data. From there, you can do the following:
@@ -26,7 +27,7 @@ To get started, download the .csv files from the Google Drive and paste them int
     * To modify how data is read, add a method to the DataReader class inside data_reader.py
 
     * To transform the data, implement a method inside data_manipulator.py
-    
-    * Each person should have their own .py file to work on. 
+        
+    * Run main.py to see results
 
 

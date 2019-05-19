@@ -73,53 +73,54 @@ def main():
     # supervised_scratch()
 
 def eval_ae():
-    def run_models_on_autoencoded_bagofwords():
-        from Models.logistic_regression import MultiClassLogisticRegression
-        from Models.random_forest import RandomForest
-        from Models.naive_bayes import NaiveBayes
-        from Models.svm import SVM
+    from Models.logistic_regression import MultiClassLogisticRegression
+    from Models.random_forest import RandomForest
+    from Models.naive_bayes import NaiveBayes
+    from Models.svm import SVM
 
-        data_reader = DataReader()
-        df = data_reader.get_all_data()
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
 
-        train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
-        train_x, train_y, val_x, val_y, test_x, test_y = bag_of_words_full_no_empty_val_no_num_no_short_no_repeat(
-            train_x_raw, train_y_raw,
-            val_x_raw, val_y_raw, test_x_raw,
-            test_y_raw)
+    train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
+    train_x, train_y, val_x, val_y, test_x, test_y = bag_of_words_full_no_empty_val_no_num_no_short_no_repeat(
+        train_x_raw, train_y_raw,
+        val_x_raw, val_y_raw, test_x_raw,
+        test_y_raw)
 
-        encoder = get_encoder(train_x, test_x, 4096)
-        encoded_train = encoder.predict(train_x)
-        encoded_test = encoder.predict(test_x)
-        encoded_val = encoder.predict(val_x)
+    encoder = get_encoder(train_x, test_x, 4096)
+    encoded_train = encoder.predict(train_x)
+    encoded_test = encoder.predict(test_x)
+    encoded_val = encoder.predict(val_x)
 
-        print('neural net ae')
-        model = _get_nn_model_bag_of_words_simple_scratch(encoded_train, train_y, encoded_val, val_y,
-                                                          data_reader.get_region_labels()['Code'], epochs=100,
-                                                          batch_size=256)
-        eval_model(model, encoded_test, test_y)
+    print('neural net ae')
+    model = _get_nn_model_bag_of_words_simple_scratch(encoded_train, train_y, encoded_val, val_y,
+                                                      data_reader.get_region_labels()['Code'], epochs=100,
+                                                      batch_size=256)
+    eval_nn(model, encoded_test, test_y)
+    evaluate_model_nn(model, encoded_test, test_y)
+    print('logistic regression ae')
+    model = MultiClassLogisticRegression()
+    model.train(encoded_train, train_y)
+    model_obj = lambda: None
+    model_obj.model = model
+    eval_model(model_obj, encoded_test, test_y)
+    evaluate_model(model, encoded_test, test_y)
 
-        print('logistic regression ae')
-        model = MultiClassLogisticRegression()
-        model.train(encoded_train, train_y)
-        model_obj = lambda: None
-        model_obj.model = model
-        eval_model(model_obj, encoded_test, test_y)
+    print('random forest ae')
+    model = RandomForest()
+    model.train(encoded_train, train_y)
+    model_obj = lambda: None
+    model_obj.model = model
+    eval_model(model_obj, encoded_test, test_y)
+    evaluate_model(model, encoded_test, test_y)
 
-        print('random forest ae')
-        model = RandomForest()
-        model.train(encoded_train, train_y)
-        model_obj = lambda: None
-        model_obj.model = model
-        eval_model(model_obj, encoded_test, test_y)
-
-        print('naive bayes ae')
-        model = NaiveBayes()
-        model.train(encoded_train, train_y)
-        model_obj = lambda: None
-        model_obj.model = model
-        eval_model(model_obj, encoded_test, test_y)
-
+    print('naive bayes ae')
+    model = NaiveBayes()
+    model.train(encoded_train, train_y)
+    model_obj = lambda: None
+    model_obj.model = model
+    eval_model(model_obj, encoded_test, test_y)
+    evaluate_model(model, encoded_test, test_y)
 
 def eval_pub_med():
     from gensim.models.keyedvectors import KeyedVectors
@@ -179,10 +180,6 @@ def eval_pub_med():
             avg.append(list(average))
     pub_med_test = np.array(avg)
 
-    from IPython import embed
-    embed()
-
-    from Models.neural_net import MultiClassNNScratch
     print("pubmed, nn")
     nn_model = _get_nn_model_bag_of_words_simple_scratch(pub_med_train, train_y_raw, pub_med_val, val_y_raw,
                                                          data_reader.get_region_labels()['Code'], epochs=100, batch_size=256)
@@ -273,7 +270,7 @@ def eval():
     print("naive bayes, doc2vec")
     eval_model(nb_bow, test_x, test_y)
 
-
+# print average precision, recall, and f1 score for non-neural network models
 def eval_model(model, test_x, test_y):
     pred = model.model.predict(test_x)
     pred_y = pd.DataFrame(pred, columns=['ON WG IDENTIFIER'])
@@ -352,9 +349,85 @@ def eval_model(model, test_x, test_y):
     print("Macro F1 Score: " + str(average_f1))
     print("Micro F1 Score: " + str(weighted_f1))
 
-    pass
+# print average precision, recall, and f1 score for a neural network
 def eval_nn(model, test_x, test_y):
-    pass
+    pred = model.model.predict(test_x)
+    pred = model.encoder.inverse_transform(pred)
+    pred_y = pd.DataFrame(pred, columns=['ON WG IDENTIFIER'])
+    pred_y['ON WG IDENTIFIER'] = pred_y['ON WG IDENTIFIER'].astype(int)
+
+    y = test_y.reset_index().drop('index', axis=1)
+    labels = y['ON WG IDENTIFIER'].unique()
+
+    precisions = []
+    for label in labels:
+        binary_y = y['ON WG IDENTIFIER'] == label
+        binary_pred = pred_y['ON WG IDENTIFIER'] == label
+        amount = len(binary_y[binary_y == True])
+        p = average_precision_score(binary_y, binary_pred)
+        precisions.append((p, amount))
+
+    average_precision = 0
+    average_amount = 0
+    weighted_precision = 0
+    weighted_amount = 0
+    for precision, amount in precisions:
+        average_precision += precision
+        average_amount += 1
+        weighted_precision += (precision * amount)
+        weighted_amount += amount
+    average_precision = average_precision / average_amount
+    weighted_precision = weighted_precision / weighted_amount
+
+    recalls = []
+    for label in labels:
+        binary_y = y['ON WG IDENTIFIER'] == label
+        binary_pred = pred_y['ON WG IDENTIFIER'] == label
+        amount = len(binary_y[binary_y == True])
+        r = recall_score(binary_y, binary_pred)
+        recalls.append((r, amount))
+
+    average_recall = 0
+    average_amount_recall = 0
+    weighted_recall = 0
+    weighted_amount_recall = 0
+    for recall, amount in recalls:
+        average_recall += recall
+        average_amount_recall += 1
+        weighted_recall += (recall * amount)
+        weighted_amount_recall += amount
+    average_recall = average_recall / average_amount_recall
+    weighted_recall = weighted_recall / weighted_amount_recall
+
+    i = 0
+    f1s = []
+    while i < len(recalls):
+        recall = recalls[i][0]
+        precision = precisions[i][0]
+        amount = recalls[i][1]
+        f1 = 2 * ((recall * precision) / (recall + precision))
+        f1s.append((f1, amount))
+        i += 1
+
+    average_f1 = 0
+    average_amount_f1 = 0
+    weighted_f1 = 0
+    weighted_amount_f1 = 0
+    for f1, amount in f1s:
+        average_f1 += f1
+        average_amount_f1 += 1
+        weighted_f1 += (f1 * amount)
+        weighted_amount_f1 += amount
+    average_f1 = average_f1 / average_amount_f1
+    weighted_f1 = weighted_f1 / weighted_amount_f1
+
+    # Average is equivelent to macro average, weighted average is equivelent to micro average
+    print("Macro Precision: " + str(average_precision))
+    print("Micro Precision: " + str(weighted_precision))
+    print("Macro Recall: " + str(average_recall))
+    print("Micro Recall: " + str(weighted_recall))
+    print("Macro F1 Score: " + str(average_f1))
+    print("Micro F1 Score: " + str(weighted_f1))
 
 def supervised_scratch():
     from Models.neural_net import MultiClassNNScratch
@@ -765,7 +838,7 @@ def auto_encoder_and_nn():
                                                                                     val_x_raw, val_y_raw, test_x_raw,
                                                                                     test_y_raw)
 
-    encoder, decoder = get_encoder(train_x, test_x, 2048)
+    encoder, decoder = get_encoder(train_x, test_x, 4096)
     encoded_train = encoder.predict(train_x)
     encoded_test = encoder.predict(test_x)
     encoded_val = encoder.predict(val_x)
