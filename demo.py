@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import os
 
 from data_reader import DataReader
@@ -9,9 +10,14 @@ from keras.models import load_model
 from nltk.tokenize import RegexpTokenizer
 from sklearn.feature_extraction.text import CountVectorizer
 
+
+np.warnings.filterwarnings('ignore')
+
 def main():
     data_reader = DataReader()
     df = data_reader.get_all_data()
+
+    top_x_predictions = 10
 
     # Split data
     train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
@@ -46,23 +52,33 @@ def main():
         stdin = input("Enter all information:")
         if stdin == 'quit':
             break
+        try:
+            top_x_predictions = int(stdin)
+            print("Will return top " + str(top_x_predictions) + " predictions")
+        except ValueError:
+            tokenizer = RegexpTokenizer(regex_string)
+            tokens = tokenizer.tokenize(stdin.lower())
 
-        tokenizer = RegexpTokenizer(regex_string)
-        tokens = tokenizer.tokenize(stdin.lower())
+            vectorizer = CountVectorizer(tokenizer=lambda x: x, lowercase=False, strip_accents=False,
+                                          vocabulary=feature_names)
 
-        vectorizer = CountVectorizer(tokenizer=lambda x: x, lowercase=False, strip_accents=False,
-                                      vocabulary=feature_names)
+            model_input = vectorizer.fit_transform([tokens])
+            pred = model.model.predict(model_input)
 
-        model_input = vectorizer.fit_transform([tokens])
-        pred = model.model.predict(model_input)
 
-        one_hot_pred = np.zeros_like(pred)
-        one_hot_pred[np.arange(len(pred)), pred.argmax(1)] = 1
+            # Top X Predictions
+            rows = []
+            for i in range(top_x_predictions):
+                one_hot_pred = np.zeros_like(pred)
+                one_hot_pred[np.arange(len(pred)), (np.argpartition(pred[0], -top_x_predictions)[-top_x_predictions:][i])] = 1
+                id = model.encoder.inverse_transform(one_hot_pred)[0][0]
+                row = data_reader.regional_df[data_reader.regional_df['Code'] == id]
+                row['Prediction Confidence'] = (pred[0][(np.argpartition(pred[0], -top_x_predictions)[-top_x_predictions:][
+                    i])]) * 100
+                rows.append(row)
 
-        id = model.encoder.inverse_transform(one_hot_pred)[0][0]
-        row = data_reader.regional_df[data_reader.regional_df['Code'] == id]
-
-        print(row)
+            rows = (pd.concat(rows)).sort_values('Prediction Confidence', ascending=False)
+            print(rows)
 
 
 

@@ -19,6 +19,16 @@ def tfidf_no_empty_val(train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_ra
 
     return train_x, train_y, val_x, val_y, test_x, test_y
 
+@Cachable("tfidf_no_empty.pkl", version=1)
+def tfidf_no_empty(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
+    tokens, train_y_raw = tokenize(train_x_raw, train_y_raw, save_missing_feature_as_string=False, remove_empty=True)
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens, train_y_raw, vectorizer_class=TfidfVectorizer)
+
+    tokens, test_y_raw = tokenize(test_x_raw, test_y_raw, save_missing_feature_as_string=False, remove_empty=True)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens, test_y_raw, feature_names=feature_names, vectorizer_class=TfidfVectorizer)
+
+    return train_x, train_y, test_x, test_y
+
 @Cachable("simple_bag_of_words.pkl", version=1)
 def bag_of_words_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
     tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
@@ -128,6 +138,19 @@ def doc2vec_simple(train_x_raw, train_y_raw, test_x_raw, test_y_raw):
     test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
 
     return train_x, train_y, test_x, test_y
+
+@Cachable("simple_doc2vec_val.pkl", version=1)
+def doc2vec_simple_val(train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw):
+    tokens, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, save_missing_feature_as_string=False)
+    train_x, train_y, doc2vec_model = tokens_to_doc2vec(tokens, train_y_raw)
+
+    tokens, val_y_raw = tokenize_columns(val_x_raw, val_y_raw, save_missing_feature_as_string=False)
+    val_x, val_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
+
+    tokens, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, save_missing_feature_as_string=False)
+    test_x, test_y = tokens_to_doc2vec(tokens, test_y_raw, model=doc2vec_model)
+
+    return train_x, train_y, val_x, val_y, test_x, test_y
 
 @Cachable("save_missing_features_remove_repeats_remove_short_doc2vec.pkl", version=1)
 def doc2vec_save_missing_features_remove_repeats_remove_short(train_x_raw, train_y_raw, test_x_raw, test_y_raw):

@@ -8,6 +8,7 @@ from data_reader import DataReader
 from data_manipulator import *
 from Models.siamese import SiameseNN
 from Models.knn import KNN
+import sys
 import random
 import warnings
 warnings.filterwarnings("ignore")
@@ -107,11 +108,11 @@ def create_pairwise_dataset(x, y, k=15, train_ratio=0.66, limit=100, unseen_num_
     
 #    print('Creating dataset with total classess of {} ..'.format(len(labels_dict_train)))
         
-    train_x, train_y = create_pair(labels_dict_train, labels, True)
+    train_x, train_y = create_pair(labels_dict_train, labels)
 
 #    print('Total samples created for training: {}'.format(len(train_y)))
     
-    test_x, test_y = create_pair(labels_dict_test, labels, False)
+    test_x, test_y = create_pair(labels_dict_test, labels,)
     
 #    print('Total samples created for testing: {}'.format(len(test_y)))
     
@@ -329,18 +330,18 @@ def siamese_fewshot(train, snn_seen_score, snn_unseen_score, knn_score, nn_score
 
     
 
-#if __name__ == '__main__':
-#
-#    variable1 = int(sys.argv[1])
-#    limit = variable1
-#    variable2 = int(sys.argv[2])
-#    unseen_num_class = variable2
-#
-#    siamese_fewshot(train=True, 
-#                    snn_seen_score=True, 
-#                    snn_unseen_score=False, 
-#                    knn_score=False, 
-#                    nn_score=False, 
-#                    limit=limit,
-#                    unseen_num_class=unseen_num_class)
+if __name__ == '__main__':
+
+    variable1 = int(sys.argv[1])
+    limit = variable1
+    variable2 = int(sys.argv[2])
+    unseen_num_class = variable2
+
+    siamese_fewshot(train=False, 
+                    snn_seen_score=False, 
+                    snn_unseen_score=True, 
+                    knn_score=False, 
+                    nn_score=False, 
+                    limit=limit,
+                    unseen_num_class=unseen_num_class)
 
