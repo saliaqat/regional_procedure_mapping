@@ -1,5 +1,6 @@
 from Models.logistic_regression import BinaryLogisticRegressionModel
 from Models.model import Model
+from Models.clustermodel import Kmeans
 from data_manipulator_interface import bag_of_words_full_no_empty, tfidf_no_empty, doc2vec_simple, bag_of_words_full_no_empty_val_no_num_no_short_no_repeat
 from data_reader import DataReader
 from data_manipulator import *
@@ -22,18 +23,18 @@ import pandas as pd
 def main():
     # Calculates the qualitative method evaluation.
     # Evaluate logistic regression, random forest, naive bayes and neural network on a pub med word2vec representation
-    eval_pub_med()
+#    eval_pub_med()
     # Evaluate logistic regression, random forest, naive bayes and neural network on a autoencoder + bagofwords representation
-    eval_ae()
+#    eval_ae()
     # Evaluate logistic regression, random forest, naive bayes and neural network on a bag of words, tfidf and doc2vec represetnation
-    eval()
+#    eval()
 
     # Runs the generalizability check on nn and bow
     # Results saved to a set of files in output_dir. Files will have random name of 7 characters.
-    per_site_accuracy_increase()
+#    per_site_accuracy_increase()
 
-
-
+    # Runs kmeans and gets keywords
+    top_keywords_kmeans()
     pass
 
 def eval_pub_med():
@@ -295,6 +296,59 @@ def per_site_accuracy_increase():
             i+=1
         file.close()
 
+def top_keywords_kmeans():
+    # get data
+    data_reader = DataReader()
+    df = data_reader.get_all_data()
+    train_x_raw, train_y_raw, test_x_raw, test_y_raw = get_train_test_split(df)
+    train_x_raw.drop(['RIS PROCEDURE CODE'], axis=1, inplace=True)
+    test_x_raw.drop(['RIS PROCEDURE CODE'], axis=1, inplace=True)
+
+    # identify ON WG IDENTIFIERS that occur infrequently
+    min_samples = 5 
+    train_y_list = train_y_raw['ON WG IDENTIFIER'].values.tolist()
+    unique_ids = list(set(train_y_list))
+    small_clusters = list()
+    for i in unique_ids:
+        if train_y_list.count(i) < min_samples:
+            small_clusters.append(i)
+    train_x_raw = train_x_raw[~train_y_raw['ON WG IDENTIFIER'].isin(small_clusters)]
+    train_y_raw = train_y_raw[~train_y_raw['ON WG IDENTIFIER'].isin(small_clusters)]
+    num_clusters = len(unique_ids) - len(small_clusters)
+
+    # append the ON WG IDENTIFIERS to the original documents
+    train_y_raw = pd.concat([train_x_raw, train_y_raw], axis=1)
+    test_y_raw = pd.concat([test_x_raw, test_y_raw], axis=1)
+
+    # tokenize and subsample
+    tokens_train, train_y_raw = tokenize_columns(train_x_raw, train_y_raw, regex_string=r'[a-zA-Z0-9]+',
+        save_missing_feature_as_string=False, remove_short=True, remove_num=True, remove_empty=True)
+    tokens_test, test_y_raw = tokenize_columns(test_x_raw, test_y_raw, regex_string=r'[a-zA-Z0-9]+',
+        save_missing_feature_as_string=False, remove_short=True, remove_num=True, remove_empty=True)
+
+    # get TF-IDF representation of data
+    feature_names = list()
+    train_x = list()
+    train_y = list()
+    test_x = list()
+    test_y = list()
+    train_x, train_y, feature_names = tokens_to_bagofwords(tokens_train, train_y_raw, TfidfVectorizer)
+    test_x, test_y, _ = tokens_to_bagofwords(tokens_test, test_y_raw, TfidfVectorizer, feature_names=feature_names)
+    train_x = train_x.toarray()
+    test_x = test_x.toarray()
+
+    # run kmeans
+    kmeans = Kmeans(num_clusters, feature_names, train_x, train_y, "tfidf")
+    kmeans.eval()
+    labels = kmeans.get_labels()
+
+    # get top 10 keywords for each cluster
+    n_terms = 10
+    # group by clusters and get the mean occurence of each word
+    df = pd.DataFrame(train_x).groupby(labels).mean()
+    # iterate through each cluster and get the most frequent occuring words
+    for i,r in df.iterrows():
+        print('Cluster {}: '.format(i) + ','.join([str(feature_names[t]) for t in np.argsort(r)[-n_terms:]]))
 
 if __name__ == '__main__':
     main()
