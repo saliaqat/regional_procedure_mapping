@@ -20,12 +20,15 @@ feature_columns_with_desc = [('RIS PROCEDURE CODE', "risproccode"), ('RIS PROCED
                    ('PACS SITE PROCEDURE CODE', "pacsproccode"), ('PACS PROCEDURE DESCRIPTION', "pacsprocdesc"),
                    ('PACS STUDY DESCRIPTION', "pacsstudydesc"), ('PACS BODY PART', "pacsbodypart"), ('PACS MODALITY', "pacsmodality"),
                    ('DEFAULT LOCALIZATION FOR FEM', 'default')]
-text_columns = ['RIS PROCEDURE CODE', 'RIS PROCEDURE DESCRIPTION', 'PACS SITE PROCEDURE CODE', 'PACS PROCEDURE DESCRIPTION', 'PACS STUDY DESCRIPTION', 'PACS BODY PART', 'PACS MODALITY']
+# text_columns = ['RIS PROCEDURE CODE', 'RIS PROCEDURE DESCRIPTION', 'PACS SITE PROCEDURE CODE', 'PACS PROCEDURE DESCRIPTION', 'PACS STUDY DESCRIPTION', 'PACS BODY PART', 'PACS MODALITY']
 text_columns_with_desc = [('RIS PROCEDURE CODE', "risproccode"), ('RIS PROCEDURE DESCRIPTION', "risprocdesc"),
                    ('PACS SITE PROCEDURE CODE', "pacsproccode"), ('PACS PROCEDURE DESCRIPTION', "pacsprocdesc"),
                    ('PACS STUDY DESCRIPTION', "pacsstudydesc"), ('PACS BODY PART', "pacsbodypart"), ('PACS MODALITY', "pacsmodality")]
-label_columns = ['ON WG IDENTIFIER']
+# label_columns = ['ON WG IDENTIFIER']
 
+text_columns = ['ris_procedure_code', 'ris_procedure_description', 'pacs_procedure_code', 'pacs_study_description',
+                'pacs_procedure_description', 'pacs_body_part', 'pacs_modality', 'dicom_laterality']
+label_columns = ['uit_code']
 def prep_single_test_set(input_df, random_state=1337, label=label_columns, test_size=0.25):
     # dropping src_file since its is not a feature
     df = input_df.drop('src_file', axis=1)
@@ -112,8 +115,8 @@ def tokenize(x, y, save_missing_feature_as_string=False, regex_string=r'[a-zA-Z0
         for col in text_columns_with_desc:
             x[col[0]] = x[col[0]].apply(lambda x: x if x != 'nan' else ("missing" + col[1]))
     else:
-        for col in text_columns_with_desc:
-            x[col[0]] = x[col[0]].apply(lambda x: x if x != 'nan' else "")
+        for col in text_columns:
+            x[col] = x[col].apply(lambda x: x if x != 'nan' else "")
 
     for col in text_columns:
         tokens = x[col].apply(lambda x: ((tokenizer.tokenize(x.lower()))))

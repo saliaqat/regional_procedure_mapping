@@ -161,8 +161,8 @@ class MultiClassNNScratch(NeuralNet):
 
         inputs = Input(shape=(features, ), name="input")
 
-        x = Dense(7750, activation="relu", name="dense1")(inputs)
-        # x = Dense(4096, activation="relu", name="dense2")(x)
+        # x = Dense(7750, activation="relu", name="dense1")(inputs)
+        x = Dense(4096, activation="relu", name="dense1f")(inputs)
         y = Dense(self.encoder.transform(self.labels).shape[1], activation="softmax", name="output")(x)
 
         self.model = kerasModel(inputs, y)

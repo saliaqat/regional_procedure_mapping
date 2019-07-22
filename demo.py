@@ -14,23 +14,24 @@ from sklearn.feature_extraction.text import CountVectorizer
 np.warnings.filterwarnings('ignore')
 
 def main():
-    data_reader = DataReader()
-    df = data_reader.get_all_data()
+    run_swodin()
 
-    top_x_predictions = 10
-
-    # Split data
-    train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
-
-    # get bag of words
-    train_x, train_y, val_x, val_y, test_x, test_y, feature_names = get_bag_of_words(train_x_raw, train_y_raw,
-                                                                                    val_x_raw, val_y_raw,
-                                                                                    test_x_raw, test_y_raw)
-    # get all labels
-    labels = data_reader.get_region_labels()['Code']
-
-
+def original_model():
     if not os.path.isfile('demo_nn.h5'):
+        data_reader = DataReader()
+        df = data_reader.get_all_data()
+
+        top_x_predictions = 10
+
+        # Split data
+        train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
+
+        # get bag of words
+        train_x, train_y, val_x, val_y, test_x, test_y, feature_names = get_bag_of_words(train_x_raw, train_y_raw,
+                                                                                         val_x_raw, val_y_raw,
+                                                                                         test_x_raw, test_y_raw)
+        # get all labels
+        labels = data_reader.get_region_labels()['Code']
         # train neural net
         model = MultiClassNNScratch(train_x.shape, np.array(labels), epochs=150, batch_size=1024)
         model.set_train_data(train_x, train_y)
@@ -40,8 +41,8 @@ def main():
         model.model.save('demo_nn.h5')
     else:
         # load neural net
-        model = MultiClassNNScratch(train_x.shape, np.array(labels), epochs=150, batch_size=1024)
-        model.set_train_data(train_x, train_y)
+        model = MultiClassNNScratch(1, np.array([]), epochs=150, batch_size=1024)
+        model.set_train_data(1, 1)
         model.model = load_model('demo_nn.h5', custom_objects={'top_3_accuracy': top_3_accuracy})
 
     # from IPython import embed
@@ -84,7 +85,74 @@ def main():
 
 
 
+def run_swodin():
+    data_reader = DataReader()
+    df = pd.read_csv('input_data/ontario_labels/swodin.csv')
+    df['src_file'] = 1
 
+    top_x_predictions = 10
+
+    # Split data
+    train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw = get_train_validate_test_split(df)
+
+    # get bag of words
+    train_x, train_y, val_x, val_y, test_x, test_y, feature_names = get_bag_of_words(train_x_raw, train_y_raw,
+                                                                                     val_x_raw, val_y_raw,
+                                                                                     test_x_raw, test_y_raw)
+    labels = pd.DataFrame({'Code': df['uit_code'].unique()})
+    if not os.path.isfile('swodin_model.h5'):
+
+        # get all labels
+        # train neural net
+        model = MultiClassNNScratch(train_x.shape, np.array(labels), epochs=150, batch_size=1024)
+        model.set_train_data(train_x, train_y)
+        model.train(val_x, val_y)
+
+        # save neural net
+        model.model.save('swodin_model.h5')
+    else:
+        # load neural net
+        model = MultiClassNNScratch(train_x.shape, np.array(labels), epochs=150, batch_size=1024)
+        model.set_train_data(train_x, train_y)
+        model.model.load_weights('swodin_model.h5')
+
+    # from IPython import embed
+    # embed()
+
+    regex_string = r'[a-zA-Z0-9]+'
+    regional = df[['uit_code', 'provincial_term']]
+    regional = regional.drop_duplicates()
+    while True:
+        stdin = input("Enter all information:")
+        if stdin == 'quit':
+            break
+        try:
+            top_x_predictions = int(stdin)
+            print("Will return top " + str(top_x_predictions) + " predictions")
+        except ValueError:
+            tokenizer = RegexpTokenizer(regex_string)
+            tokens = tokenizer.tokenize(stdin.lower())
+
+            vectorizer = CountVectorizer(tokenizer=lambda x: x, lowercase=False, strip_accents=False,
+                                          vocabulary=feature_names)
+
+            model_input = vectorizer.fit_transform([tokens])
+            pred = model.model.predict(model_input)
+
+
+            # Top X Predictions
+            rows = []
+            for i in range(top_x_predictions):
+                one_hot_pred = np.zeros_like(pred)
+                one_hot_pred[np.arange(len(pred)), (np.argpartition(pred[0], -top_x_predictions)[-top_x_predictions:][i])] = 1
+                id = model.encoder.inverse_transform(one_hot_pred)[0][0]
+                row = regional[regional['uit_code'] == id]
+                row['Prediction Confidence'] = (pred[0][(np.argpartition(pred[0], -top_x_predictions)[-top_x_predictions:][
+                    i])]) * 100
+                rows.append(row)
+
+            rows = (pd.concat(rows)).sort_values('Prediction Confidence', ascending=False)
+            print(rows)
 
 
 def get_bag_of_words(train_x_raw, train_y_raw, val_x_raw, val_y_raw, test_x_raw, test_y_raw):
